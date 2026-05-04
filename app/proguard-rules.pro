@@ -1,0 +1,2 @@
+-keep class com.wallpapercropfixer.domain.** { *; }
+-keepattributes *Annotation*
