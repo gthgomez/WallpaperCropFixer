@@ -41,3 +41,6 @@ dist/
 *.import
 export_presets.cfg
 *.ipa
+
+# Temporary development artifacts
+commitPlan.json
