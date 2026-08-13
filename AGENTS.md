@@ -1,22 +1,11 @@
-# AGENTS.md - WallpaperCropFixer
+# AGENTS.md — WallpaperCropFixer (Gemini 3 Flash Override)
 
-Agent-neutral startup router for the WallpaperCropFixer Android app. Root `ENGINEERING.md` and root `AGENTS.md` remain authoritative for safety, verification, deletion, scope, and truthfulness.
+> Inherits from root [AGENTS.md](file:///C:/Workspace/Project_Android/AGENTS.md). General guidance is in [CLAUDE.md](./CLAUDE.md).
 
-## Startup Sequence
+## Gemini-Specific Risks
+- Hallucinated ML Kit Face Detection API — bounding box coordinates and face landmarks
+- Incorrect EXIF orientation mapping applied to crop math — orientation must be read before cropping
+- Confusion about Hilt DI — Hilt IS authorized here (exception to workspace no-DI convention)
+- Hallucinated Coil image loading transformation chains
 
-1. Read `C:\Workspace\ENGINEERING.md`.
-2. Read `C:\Workspace\AGENTS.md`.
-3. Read `C:\Workspace\Project_Android\PROJECT_CONTEXT.md`.
-4. Read `PROJECT_CONTEXT.md` in this directory.
-5. Read a model adapter only when it applies to the active tool.
-
-## Local Rules
-
-- `PROJECT_CONTEXT.md` is the canonical app-local context for all agents.
-- This app uses Hilt, DataStore, Coil, ML Kit face detection, and EXIF handling.
-- Do not assume the parent Project_Android "manual DI only" pattern applies here.
-- Treat image crop math, EXIF handling, file/export behavior, and Android manifest changes as high risk.
-
-## Verification
-
-Use the Gradle commands in `PROJECT_CONTEXT.md`. Do not claim Android build/test success unless the command was actually run and passed.
+**Verification gate:** `./gradlew assembleDebug`

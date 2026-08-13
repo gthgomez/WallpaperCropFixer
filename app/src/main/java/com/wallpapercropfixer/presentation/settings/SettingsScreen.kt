@@ -1,6 +1,7 @@
 package com.wallpapercropfixer.presentation.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -47,12 +49,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wallpapercropfixer.presentation.components.ModeChipRow
 import com.wallpapercropfixer.presentation.components.WallpaperTargetTabs
 
+/** Placeholder until a live privacy URL is published — see PRIVACY.md. */
+internal const val TODO_PRIVACY_URL = "https://example.invalid/wallpaper-crop-fixer-privacy"
+
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(containerColor = Color(0xFFFAFAFA)) { padding ->
         Column(
@@ -200,6 +206,15 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                Text(
+                    text = "Privacy policy",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 4.dp, bottom = 8.dp)
+                        .clickable { uriHandler.openUri(TODO_PRIVACY_URL) }
+                )
 
                 Spacer(Modifier.height(16.dp))
             }
