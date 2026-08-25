@@ -30,13 +30,22 @@ class AndroidImageRepository @Inject constructor(
             error("Cannot decode image bounds: $uri")
         }
 
+        val orientation = getExifOrientation(uri)
+        val isSwapped = orientation == ExifInterface.ORIENTATION_ROTATE_90 ||
+                orientation == ExifInterface.ORIENTATION_ROTATE_270 ||
+                orientation == ExifInterface.ORIENTATION_TRANSPOSE ||
+                orientation == ExifInterface.ORIENTATION_TRANSVERSE
+
+        val width = if (isSwapped) options.outHeight else options.outWidth
+        val height = if (isSwapped) options.outWidth else options.outHeight
+
         val mimeType = options.outMimeType
             ?: context.contentResolver.getType(Uri.parse(uri))
 
         return SourceImageMeta(
             uri = uri,
-            width = options.outWidth,
-            height = options.outHeight,
+            width = width,
+            height = height,
             mimeType = mimeType
         )
     }
@@ -47,7 +56,16 @@ class AndroidImageRepository @Inject constructor(
             BitmapFactory.decodeStream(stream, null, options)
         }
 
-        options.inSampleSize = computeSampleSize(options.outWidth, options.outHeight, maxWidth, maxHeight)
+        val orientation = getExifOrientation(uri)
+        val isSwapped = orientation == ExifInterface.ORIENTATION_ROTATE_90 ||
+                orientation == ExifInterface.ORIENTATION_ROTATE_270 ||
+                orientation == ExifInterface.ORIENTATION_TRANSPOSE ||
+                orientation == ExifInterface.ORIENTATION_TRANSVERSE
+
+        val rawMaxW = if (isSwapped) maxHeight else maxWidth
+        val rawMaxH = if (isSwapped) maxWidth else maxHeight
+
+        options.inSampleSize = computeSampleSize(options.outWidth, options.outHeight, rawMaxW, rawMaxH)
         options.inJustDecodeBounds = false
         options.inPreferredConfig = Bitmap.Config.ARGB_8888
 
@@ -55,20 +73,24 @@ class AndroidImageRepository @Inject constructor(
             BitmapFactory.decodeStream(stream, null, options)
         } ?: error("Cannot decode bitmap: $uri")
 
-        return applyExifRotation(bitmap, uri)
+        return applyExifRotation(bitmap, orientation)
     }
 
-    // Opens an InputStream for either a file:// path (plain local file) or a
-    // content:// URI. Using FileInputStream directly for file paths avoids
-    // FileUriExposedException, which ContentResolver.openInputStream throws on
-    // file:// schemes on Android 7+ (API 24+).
+    // Opens an InputStream for either a file path / file:// URI or a content:// URI.
+    // Checking direct File existence first avoids Uri.parse() parsing Windows drive
+    // letters (e.g. C:) as custom URI schemes, and avoids FileUriExposedException.
     private fun openStream(uri: String): InputStream? {
+        val directFile = File(uri)
+        if (directFile.exists() && directFile.isFile) {
+            return runCatching { FileInputStream(directFile) }.getOrNull()
+        }
+
         val parsed = Uri.parse(uri)
-        return if (parsed.scheme == "file" || parsed.scheme == null) {
+        return if (parsed.scheme == "file" || parsed.scheme == null || parsed.scheme?.length == 1) {
             val path = parsed.path ?: uri
             runCatching { FileInputStream(File(path)) }.getOrNull()
         } else {
-            context.contentResolver.openInputStream(parsed)
+            runCatching { context.contentResolver.openInputStream(parsed) }.getOrNull()
         }
     }
 
@@ -77,15 +99,15 @@ class AndroidImageRepository @Inject constructor(
         if (srcH > maxH || srcW > maxW) {
             val halfH = srcH / 2
             val halfW = srcW / 2
-            while ((halfH / sampleSize) > maxH && (halfW / sampleSize) > maxW) {
+            while ((halfH / sampleSize) >= maxH || (halfW / sampleSize) >= maxW) {
                 sampleSize *= 2
             }
         }
         return sampleSize
     }
 
-    private fun applyExifRotation(bitmap: Bitmap, uri: String): Bitmap {
-        val rotation = try {
+    private fun getExifOrientation(uri: String): Int {
+        return try {
             openStream(uri)?.use { stream ->
                 ExifInterface(stream).getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
@@ -95,15 +117,31 @@ class AndroidImageRepository @Inject constructor(
         } catch (_: Exception) {
             ExifInterface.ORIENTATION_NORMAL
         }
+    }
 
-        val degrees = when (rotation) {
-            ExifInterface.ORIENTATION_ROTATE_90  -> 90f
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+    private fun applyExifRotation(bitmap: Bitmap, orientation: Int): Bitmap {
+        if (orientation == ExifInterface.ORIENTATION_NORMAL || orientation == ExifInterface.ORIENTATION_UNDEFINED) {
+            return bitmap
+        }
+
+        val matrix = android.graphics.Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
             else -> return bitmap
         }
 
-        val matrix = android.graphics.Matrix().apply { postRotate(degrees) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             .also { if (it !== bitmap) bitmap.recycle() }
     }

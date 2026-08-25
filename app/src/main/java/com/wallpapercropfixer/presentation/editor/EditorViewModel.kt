@@ -9,7 +9,9 @@ import com.wallpapercropfixer.domain.model.CropMode
 import com.wallpapercropfixer.domain.model.FocusPoint
 import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
+import com.wallpapercropfixer.domain.model.UserSettings
 import com.wallpapercropfixer.domain.repository.ImageRepository
+import com.wallpapercropfixer.domain.repository.SettingsRepository
 import com.wallpapercropfixer.domain.usecase.AnalyzeSubjectUseCase
 import com.wallpapercropfixer.domain.usecase.ApplyWallpaperUseCase
 import com.wallpapercropfixer.domain.usecase.BuildWallpaperRenderPlanUseCase
@@ -18,18 +20,22 @@ import com.wallpapercropfixer.domain.usecase.GetCurrentDeviceProfileUseCase
 import com.wallpapercropfixer.domain.usecase.RenderWallpaperBitmapUseCase
 import com.wallpapercropfixer.domain.usecase.ResolveWallpaperBehaviorUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     private val imageRepository: ImageRepository,
+    private val settingsRepository: SettingsRepository,
     private val getDeviceProfile: GetCurrentDeviceProfileUseCase,
     private val resolveBehavior: ResolveWallpaperBehaviorUseCase,
     private val analyzeSubject: AnalyzeSubjectUseCase,
@@ -44,8 +50,22 @@ class EditorViewModel @Inject constructor(
 
     private var previewJob: Job? = null
 
-    fun loadImage(uri: String) {
+    init {
         viewModelScope.launch {
+            val settings = runCatching { settingsRepository.observeSettings().first() }.getOrDefault(UserSettings())
+            _uiState.update {
+                it.copy(
+                    cropMode = settings.defaultCropMode,
+                    wallpaperTarget = settings.defaultWallpaperTarget,
+                    backgroundFillMode = settings.defaultBackgroundFillMode,
+                    faceAwareEnabled = settings.defaultFaceAwareEnabled
+                )
+            }
+        }
+    }
+
+    fun loadImage(uri: String) {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, imageUri = uri, errorMessage = null) }
             runCatching {
                 val meta = imageRepository.readImageMeta(uri)
@@ -62,7 +82,6 @@ class EditorViewModel @Inject constructor(
                 }
 
                 if (_uiState.value.faceAwareEnabled) {
-                    // Failure is non-blocking — fall back to center-weighted crop silently
                     val analysis = runCatching { analyzeSubject(uri) }
                         .onFailure { Logger.e("Face detection failed — continuing without it", it) }
                         .getOrNull()
@@ -109,17 +128,20 @@ class EditorViewModel @Inject constructor(
     }
 
     fun resetToDefaults() {
-        _uiState.update {
-            it.copy(
-                cropMode = CropMode.BALANCED,
-                wallpaperTarget = WallpaperTarget.HOME,
-                backgroundFillMode = BackgroundFillMode.BLUR,
-                faceAwareEnabled = true,
-                manualFocusPoint = null,
-                previewingLock = false
-            )
+        viewModelScope.launch {
+            val settings = runCatching { settingsRepository.observeSettings().first() }.getOrDefault(UserSettings())
+            _uiState.update {
+                it.copy(
+                    cropMode = settings.defaultCropMode,
+                    wallpaperTarget = settings.defaultWallpaperTarget,
+                    backgroundFillMode = settings.defaultBackgroundFillMode,
+                    faceAwareEnabled = settings.defaultFaceAwareEnabled,
+                    manualFocusPoint = null,
+                    previewingLock = false
+                )
+            }
+            generatePreview()
         }
-        generatePreview()
     }
 
     fun generatePreview() {
@@ -129,7 +151,7 @@ class EditorViewModel @Inject constructor(
         val behavior = state.behaviorProfile ?: return
 
         previewJob?.cancel()
-        previewJob = viewModelScope.launch {
+        previewJob = viewModelScope.launch(Dispatchers.Default) {
             _uiState.update { it.copy(isRendering = true, errorMessage = null) }
 
             runCatching {
@@ -150,7 +172,7 @@ class EditorViewModel @Inject constructor(
                 val homePlan = buildRenderPlan(homeRequest, state.subjectAnalysis)
 
                 if (isBoth) {
-                    // Render HOME and LOCK concurrently
+                    // Render HOME and LOCK sequentially or concurrently
                     val lockRequest = homeRequest.copy(target = WallpaperTarget.LOCK)
                     val lockPlan = buildRenderPlan(lockRequest, state.subjectAnalysis)
 
@@ -195,18 +217,21 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun exportWallpaper(quality: Int = 92) {
+    fun exportWallpaper(quality: Int? = null) {
         val state = _uiState.value
         val homeBitmap = state.previewBitmap ?: return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRendering = true, errorMessage = null) }
             runCatching {
-                exportWallpaper(homeBitmap, FileNameFactory.wallpaperFileName("wcf_home"), quality)
+                val effectiveQuality = quality
+                    ?: runCatching { settingsRepository.observeSettings().first().exportJpegQuality }.getOrDefault(92)
+
+                exportWallpaper(homeBitmap, FileNameFactory.wallpaperFileName("wcf_home"), effectiveQuality)
 
                 // Also export lock bitmap if available
                 state.lockPreviewBitmap?.let { lockBitmap ->
-                    exportWallpaper(lockBitmap, FileNameFactory.wallpaperFileName("wcf_lock"), quality)
+                    exportWallpaper(lockBitmap, FileNameFactory.wallpaperFileName("wcf_lock"), effectiveQuality)
                 }
 
                 _uiState.update {
@@ -228,15 +253,21 @@ class EditorViewModel @Inject constructor(
         val homeBitmap = state.previewBitmap ?: return
         val target = state.wallpaperTarget
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRendering = true, errorMessage = null, successMessage = null) }
 
             val result = if (target == WallpaperTarget.BOTH && state.lockPreviewBitmap != null) {
-                // Apply HOME and LOCK independently with their distinct bitmaps
                 val homeResult = applyWallpaper(homeBitmap, WallpaperTarget.HOME)
                 val lockResult = applyWallpaper(state.lockPreviewBitmap, WallpaperTarget.LOCK)
-                if (homeResult.isSuccess && lockResult.isSuccess) Result.success(Unit)
-                else homeResult // surface the first failure
+                if (homeResult.isSuccess && lockResult.isSuccess) {
+                    Result.success(Unit)
+                } else if (homeResult.isFailure && lockResult.isFailure) {
+                    Result.failure(Exception("Failed to apply wallpaper to home and lock screens: ${homeResult.exceptionOrNull()?.message}"))
+                } else if (homeResult.isFailure) {
+                    Result.failure(Exception("Failed to apply home screen wallpaper: ${homeResult.exceptionOrNull()?.message} (Lock screen succeeded)"))
+                } else {
+                    Result.failure(Exception("Failed to apply lock screen wallpaper: ${lockResult.exceptionOrNull()?.message} (Home screen succeeded)"))
+                }
             } else {
                 applyWallpaper(homeBitmap, target)
             }

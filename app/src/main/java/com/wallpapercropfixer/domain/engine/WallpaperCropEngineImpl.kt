@@ -52,8 +52,18 @@ class WallpaperCropEngineImpl @Inject constructor(
             standardCropRect
         )
 
-        val usePadding = strategySelector.shouldUsePadding(request.cropMode, removalFraction)
-        val chosenCropRect = strategySelector.selectCropRect(request.cropMode, standardCropRect, usePadding)
+        val hasClippedFaces = if (request.enableFaceAwareFocus && subjectAnalysis != null && subjectAnalysis.faces.isNotEmpty()) {
+            subjectAnalysis.faces.any { face ->
+                face.left < standardCropRect.left ||
+                face.right > standardCropRect.right ||
+                face.top < standardCropRect.top ||
+                face.bottom > standardCropRect.bottom
+            }
+        } else false
+
+        val fullSourceRect = CropRect(0f, 0f, request.source.width.toFloat(), request.source.height.toFloat())
+        val usePadding = strategySelector.shouldUsePadding(request.cropMode, removalFraction, hasClippedFaces)
+        val chosenCropRect = strategySelector.selectCropRect(request.cropMode, standardCropRect, fullSourceRect, usePadding)
 
         // When padding is used, the image occupies a sub-region of the canvas.
         // When not padding, the image fills the entire canvas after crop.

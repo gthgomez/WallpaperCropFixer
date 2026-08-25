@@ -10,16 +10,16 @@ import com.wallpapercropfixer.domain.model.FaceBounds
 import com.wallpapercropfixer.domain.model.FocusPoint
 import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.repository.FaceDetectionRepository
+import com.wallpapercropfixer.domain.repository.ImageRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.io.File
-import java.io.FileInputStream
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class MlKitFaceDetectionRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val imageRepository: ImageRepository
 ) : FaceDetectionRepository {
 
     private val detector = FaceDetection.getClient(
@@ -32,29 +32,31 @@ class MlKitFaceDetectionRepository @Inject constructor(
     )
 
     override suspend fun analyzeFaces(uri: String): SubjectAnalysis {
-        // InputImage.fromFilePath uses ContentResolver internally, which throws
-        // FileUriExposedException for file:// URIs on API 24+. Decode the bitmap
-        // ourselves via FileInputStream and hand it to fromBitmap instead.
-        val bitmap = openBitmap(uri)
-            ?: error("Cannot open image for face detection: $uri")
+        val meta = imageRepository.readImageMeta(uri)
+        val bitmap = imageRepository.decodeBitmapSampled(uri, maxWidth = 1080, maxHeight = 1080)
+
+        val scaleX = meta.width.toFloat() / bitmap.width.toFloat()
+        val scaleY = meta.height.toFloat() / bitmap.height.toFloat()
 
         val image = InputImage.fromBitmap(bitmap, 0)
-        val imageWidth = bitmap.width.toFloat()
-        val imageHeight = bitmap.height.toFloat()
 
-        val faces = suspendCancellableCoroutine { cont ->
-            detector.process(image)
-                .addOnSuccessListener { cont.resume(it) }
-                .addOnFailureListener { cont.resumeWithException(it) }
+        val faces = try {
+            suspendCancellableCoroutine { cont ->
+                detector.process(image)
+                    .addOnSuccessListener { cont.resume(it) }
+                    .addOnFailureListener { cont.resumeWithException(it) }
+            }
+        } finally {
+            bitmap.recycle()
         }
 
         val faceBounds = faces.map { face ->
             val rect = face.boundingBox
             FaceBounds(
-                left = rect.left.toFloat(),
-                top = rect.top.toFloat(),
-                right = rect.right.toFloat(),
-                bottom = rect.bottom.toFloat()
+                left = (rect.left.toFloat() * scaleX).coerceIn(0f, meta.width.toFloat()),
+                top = (rect.top.toFloat() * scaleY).coerceIn(0f, meta.height.toFloat()),
+                right = (rect.right.toFloat() * scaleX).coerceIn(0f, meta.width.toFloat()),
+                bottom = (rect.bottom.toFloat() * scaleY).coerceIn(0f, meta.height.toFloat())
             )
         }
 
@@ -64,8 +66,8 @@ class MlKitFaceDetectionRepository @Inject constructor(
             val unionRight = faceBounds.maxOf { it.right }
             val unionBottom = faceBounds.maxOf { it.bottom }
             FocusPoint(
-                xNormalized = ((unionLeft + unionRight) / 2f) / imageWidth,
-                yNormalized = ((unionTop + unionBottom) / 2f) / imageHeight
+                xNormalized = (((unionLeft + unionRight) / 2f) / meta.width.toFloat()).coerceIn(0f, 1f),
+                yNormalized = (((unionTop + unionBottom) / 2f) / meta.height.toFloat()).coerceIn(0f, 1f)
             )
         } else null
 
@@ -74,14 +76,4 @@ class MlKitFaceDetectionRepository @Inject constructor(
             suggestedFocusPoint = suggestedFocus
         )
     }
-
-    private fun openBitmap(uri: String) = runCatching {
-        val parsed = Uri.parse(uri)
-        val stream = if (parsed.scheme == "file" || parsed.scheme == null) {
-            FileInputStream(File(parsed.path ?: uri))
-        } else {
-            context.contentResolver.openInputStream(parsed)!!
-        }
-        stream.use { BitmapFactory.decodeStream(it) }
-    }.getOrNull()
 }

@@ -169,17 +169,49 @@ fun WallpaperEditorScreen(
             // Preview — centrepiece, generous vertical space like Google Photos crop view
             Box(contentAlignment = Alignment.Center) {
                 Crossfade(
-                    targetState = state.previewRevision,
+                    targetState = state.activeBitmap,
                     animationSpec = tween(durationMillis = 220),
                     label = "preview_crossfade"
-                ) {
+                ) { currentBitmap ->
+                    val canvasFocus = state.renderPlan?.let { plan ->
+                        val fp = state.manualFocusPoint ?: state.subjectAnalysis?.suggestedFocusPoint
+                        val meta = state.sourceImageMeta
+                        if (fp != null && meta != null) {
+                            com.wallpapercropfixer.core.math.CropMath.sourceFocusToCanvasFocus(
+                                sourceFocus = fp,
+                                sourceWidth = meta.width,
+                                sourceHeight = meta.height,
+                                sourceCropRect = plan.sourceCropRect,
+                                outputImagePlacement = plan.outputImagePlacement,
+                                canvasWidth = plan.targetCanvasSpec.widthPx,
+                                canvasHeight = plan.targetCanvasSpec.heightPx
+                            )
+                        } else null
+                    } ?: state.manualFocusPoint ?: state.subjectAnalysis?.suggestedFocusPoint
+
                     DevicePreviewFrame(
-                        bitmap = state.activeBitmap,
+                        bitmap = currentBitmap,
                         deviceAspectRatio = state.deviceAspectRatio,
-                        focusPoint = state.manualFocusPoint
-                            ?: state.subjectAnalysis?.suggestedFocusPoint,
+                        focusPoint = canvasFocus,
                         onFocusTap = if (state.activeBitmap != null) {
-                            { viewModel.updateManualFocusPoint(it) }
+                            { tappedCanvasFocus ->
+                                val plan = state.renderPlan
+                                val meta = state.sourceImageMeta
+                                if (plan != null && meta != null) {
+                                    val sourceFocus = com.wallpapercropfixer.core.math.CropMath.canvasFocusToSourceFocus(
+                                        canvasFocus = tappedCanvasFocus,
+                                        sourceWidth = meta.width,
+                                        sourceHeight = meta.height,
+                                        sourceCropRect = plan.sourceCropRect,
+                                        outputImagePlacement = plan.outputImagePlacement,
+                                        canvasWidth = plan.targetCanvasSpec.widthPx,
+                                        canvasHeight = plan.targetCanvasSpec.heightPx
+                                    )
+                                    viewModel.updateManualFocusPoint(sourceFocus)
+                                } else {
+                                    viewModel.updateManualFocusPoint(tappedCanvasFocus)
+                                }
+                            }
                         } else null,
                         modifier = Modifier.padding(horizontal = 40.dp)
                     )

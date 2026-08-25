@@ -37,27 +37,47 @@ class AndroidWallpaperExportRepository @Inject constructor(
             val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: error("MediaStore insert returned null")
 
-            context.contentResolver.openOutputStream(uri)?.use { out ->
-                val ok = bitmap.compress(format, quality, out)
-                if (!ok) error("Bitmap compression failed")
-            } ?: error("Cannot open output stream for $uri")
+            try {
+                val ok = context.contentResolver.openOutputStream(uri)?.use { out ->
+                    bitmap.compress(format, quality, out)
+                } ?: false
 
-            values.clear()
-            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            context.contentResolver.update(uri, values, null, null)
+                if (!ok) {
+                    context.contentResolver.delete(uri, null, null)
+                    error("Bitmap compression failed for $fullName")
+                }
 
-            uri.toString()
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                val updatedRows = context.contentResolver.update(uri, values, null, null)
+                if (updatedRows <= 0) {
+                    context.contentResolver.delete(uri, null, null)
+                    error("Failed to finalize MediaStore image for $fullName")
+                }
+
+                uri.toString()
+            } catch (e: Exception) {
+                runCatching { context.contentResolver.delete(uri, null, null) }
+                throw e
+            }
         } else {
-            // API 28 and below: write to public Pictures directory
-            val dir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "WallpaperCropFixer"
-            ).also { it.mkdirs() }
+            // API 28 and below: write to public Pictures if possible, otherwise app-specific external pictures directory
+            val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            val baseDir = if (publicDir != null && (publicDir.canWrite() || publicDir.mkdirs())) {
+                File(publicDir, "WallpaperCropFixer")
+            } else {
+                context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                    ?: File(context.filesDir, "WallpaperCropFixer")
+            }
+            baseDir.mkdirs()
 
-            val file = File(dir, fullName)
+            val file = File(baseDir, fullName)
             file.outputStream().use { out ->
                 val ok = bitmap.compress(format, quality, out)
-                if (!ok) error("Bitmap compression failed for $file")
+                if (!ok) {
+                    file.delete()
+                    error("Bitmap compression failed for $file")
+                }
             }
             file.absolutePath
         }

@@ -29,7 +29,23 @@ class AndroidImageRepositoryTest {
         val meta = AndroidImageRepository(context).readImageMeta(sourceFile.absolutePath)
 
         assertEquals(sourceFile.absolutePath, meta.uri)
-        assertTrue(meta.width > 0)
-        assertTrue(meta.height > 0)
+        assertEquals(12, meta.width)
+        assertEquals(8, meta.height)
+    }
+
+    @Test
+    fun `decodeBitmapSampled downsamples large bitmap`() = runTest {
+        val context = RuntimeEnvironment.getApplication()
+        val sourceFile = File(context.cacheDir, "wcf_large_test.jpg")
+        val bitmap = Bitmap.createBitmap(1200, 800, Bitmap.Config.ARGB_8888)
+
+        FileOutputStream(sourceFile).use { output ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, output)
+        }
+
+        val decoded = AndroidImageRepository(context).decodeBitmapSampled(sourceFile.absolutePath, 300, 200)
+
+        assertTrue(decoded.width <= 600)
+        assertTrue(decoded.height <= 400)
     }
 }

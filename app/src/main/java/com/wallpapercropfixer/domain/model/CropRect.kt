@@ -6,6 +6,10 @@ data class CropRect(
     val right: Float,
     val bottom: Float
 ) {
-    val width: Float get() = right - left
-    val height: Float get() = bottom - top
+    val width: Float get() = (right - left).coerceAtLeast(0f)
+    val height: Float get() = (bottom - top).coerceAtLeast(0f)
+
+    fun contains(other: CropRect): Boolean {
+        return left <= other.left && top <= other.top && right >= other.right && bottom >= other.bottom
+    }
 }

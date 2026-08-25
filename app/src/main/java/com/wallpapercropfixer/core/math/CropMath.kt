@@ -107,6 +107,76 @@ object CropMath {
     }
 
     /**
+     * Maps a focus point from source-image normalized space [0..1] to canvas normalized space [0..1],
+     * taking into account the plan's sourceCropRect and outputImagePlacement.
+     */
+    fun sourceFocusToCanvasFocus(
+        sourceFocus: FocusPoint,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        sourceCropRect: CropRect,
+        outputImagePlacement: CropRect,
+        canvasWidth: Int,
+        canvasHeight: Int
+    ): FocusPoint {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) {
+            return sourceFocus
+        }
+        val sourcePxX = sourceFocus.xNormalized * sourceWidth
+        val sourcePxY = sourceFocus.yNormalized * sourceHeight
+
+        val cropW = sourceCropRect.width
+        val cropH = sourceCropRect.height
+        if (cropW <= 0f || cropH <= 0f) return sourceFocus
+
+        val normInCropX = ((sourcePxX - sourceCropRect.left) / cropW).coerceIn(0f, 1f)
+        val normInCropY = ((sourcePxY - sourceCropRect.top) / cropH).coerceIn(0f, 1f)
+
+        val canvasPxX = outputImagePlacement.left + normInCropX * outputImagePlacement.width
+        val canvasPxY = outputImagePlacement.top + normInCropY * outputImagePlacement.height
+
+        return FocusPoint(
+            xNormalized = (canvasPxX / canvasWidth).coerceIn(0f, 1f),
+            yNormalized = (canvasPxY / canvasHeight).coerceIn(0f, 1f)
+        )
+    }
+
+    /**
+     * Maps a focus tap from canvas normalized space [0..1] back to source-image normalized space [0..1],
+     * taking into account the plan's sourceCropRect and outputImagePlacement.
+     */
+    fun canvasFocusToSourceFocus(
+        canvasFocus: FocusPoint,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        sourceCropRect: CropRect,
+        outputImagePlacement: CropRect,
+        canvasWidth: Int,
+        canvasHeight: Int
+    ): FocusPoint {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) {
+            return canvasFocus
+        }
+        val canvasPxX = canvasFocus.xNormalized * canvasWidth
+        val canvasPxY = canvasFocus.yNormalized * canvasHeight
+
+        val placeW = outputImagePlacement.width
+        val placeH = outputImagePlacement.height
+        if (placeW <= 0f || placeH <= 0f) return canvasFocus
+
+        val normInPlaceX = ((canvasPxX - outputImagePlacement.left) / placeW).coerceIn(0f, 1f)
+        val normInPlaceY = ((canvasPxY - outputImagePlacement.top) / placeH).coerceIn(0f, 1f)
+
+        val sourcePxX = sourceCropRect.left + normInPlaceX * sourceCropRect.width
+        val sourcePxY = sourceCropRect.top + normInPlaceY * sourceCropRect.height
+
+        return FocusPoint(
+            xNormalized = (sourcePxX / sourceWidth).coerceIn(0f, 1f),
+            yNormalized = (sourcePxY / sourceHeight).coerceIn(0f, 1f)
+        )
+    }
+
+    /**
      * Computes the crop fraction threshold above which Safe Fit mode prefers padding.
      * Exposed as a constant so tests can assert against it.
      */

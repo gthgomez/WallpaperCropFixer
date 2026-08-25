@@ -49,8 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wallpapercropfixer.presentation.components.ModeChipRow
 import com.wallpapercropfixer.presentation.components.WallpaperTargetTabs
 
-/** Placeholder until a live privacy URL is published — see PRIVACY.md. */
-internal const val TODO_PRIVACY_URL = "https://example.invalid/wallpaper-crop-fixer-privacy"
+/** Privacy policy URL — see PRIVACY.md. */
+internal const val PRIVACY_URL = "https://github.com/gthgomez/WallpaperCropFixer/blob/main/PRIVACY.md"
 
 @Composable
 fun SettingsScreen(
@@ -213,7 +213,7 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(top = 4.dp, bottom = 8.dp)
-                        .clickable { uriHandler.openUri(TODO_PRIVACY_URL) }
+                        .clickable { uriHandler.openUri(PRIVACY_URL) }
                 )
 
                 Spacer(Modifier.height(16.dp))

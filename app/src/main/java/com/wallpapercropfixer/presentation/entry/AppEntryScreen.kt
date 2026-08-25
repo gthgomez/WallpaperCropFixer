@@ -114,12 +114,7 @@ fun AppEntryScreen(
 
     fun launchPicker() {
         copyError = false
-        // PickVisualMedia is permission-free on API 33+. Only gate the legacy picker.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-        } else {
-            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        }
+        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
     Column(
@@ -328,8 +323,8 @@ fun AppEntryScreen(
             )
             FeatureCard(
                 icon = Icons.Default.Wallpaper,
-                title = "True preview",
-                description = "See exactly how it looks inside a real device frame"
+                title = "Framing preview",
+                description = "Preview and optimize framing for your screen"
             )
         }
 

@@ -124,4 +124,52 @@ class CropMathTest {
     fun `safe fit threshold is 0_20`() {
         assertEquals(0.20f, CropMath.SAFE_FIT_PADDING_THRESHOLD, tolerance)
     }
+
+    // ── Focus Coordinate Transforms ──────────────────────────────────────────
+
+    @Test
+    fun `sourceFocusToCanvasFocus maps center accurately`() {
+        val sourceFocus = FocusPoint(0.5f, 0.5f)
+        val sourceCropRect = com.wallpapercropfixer.domain.model.CropRect(0f, 0f, 1000f, 1000f)
+        val placement = com.wallpapercropfixer.domain.model.CropRect(100f, 200f, 900f, 1800f)
+        val canvasFocus = CropMath.sourceFocusToCanvasFocus(
+            sourceFocus = sourceFocus,
+            sourceWidth = 1000,
+            sourceHeight = 1000,
+            sourceCropRect = sourceCropRect,
+            outputImagePlacement = placement,
+            canvasWidth = 1000,
+            canvasHeight = 2000
+        )
+        // Midpoint of placement is X: 500, Y: 1000. Normalized on canvas (1000x2000) -> 0.5, 0.5
+        assertEquals(0.5f, canvasFocus.xNormalized, tolerance)
+        assertEquals(0.5f, canvasFocus.yNormalized, tolerance)
+    }
+
+    @Test
+    fun `canvasFocusToSourceFocus round-trips accurately with sourceFocusToCanvasFocus`() {
+        val sourceFocus = FocusPoint(0.35f, 0.65f)
+        val sourceCropRect = com.wallpapercropfixer.domain.model.CropRect(100f, 100f, 900f, 900f)
+        val placement = com.wallpapercropfixer.domain.model.CropRect(50f, 100f, 950f, 1900f)
+        val canvasFocus = CropMath.sourceFocusToCanvasFocus(
+            sourceFocus = sourceFocus,
+            sourceWidth = 1000,
+            sourceHeight = 1000,
+            sourceCropRect = sourceCropRect,
+            outputImagePlacement = placement,
+            canvasWidth = 1000,
+            canvasHeight = 2000
+        )
+        val roundTripSourceFocus = CropMath.canvasFocusToSourceFocus(
+            canvasFocus = canvasFocus,
+            sourceWidth = 1000,
+            sourceHeight = 1000,
+            sourceCropRect = sourceCropRect,
+            outputImagePlacement = placement,
+            canvasWidth = 1000,
+            canvasHeight = 2000
+        )
+        assertEquals(sourceFocus.xNormalized, roundTripSourceFocus.xNormalized, tolerance)
+        assertEquals(sourceFocus.yNormalized, roundTripSourceFocus.yNormalized, tolerance)
+    }
 }
