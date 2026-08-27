@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Debug build and unit tests
+    name: Build, lint, and unit tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,3 +54,27 @@ jobs:
           name: wallpapercropfixer-release-bundle
           path: app/build/outputs/bundle/release/
           if-no-files-found: ignore
+
+  dependency-review:
+    name: Dependency vulnerability review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+  secrets-scan:
+    name: Secrets scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

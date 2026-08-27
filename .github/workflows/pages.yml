@@ -1,0 +1,48 @@
+name: Publish Privacy Policy
+
+# Renders PRIVACY.md as a public GitHub Pages site so the in-app privacy link
+# (https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html) is accessible to
+# users and Google Play reviewers without authentication.
+#
+# OWNER ACTION: enable GitHub Pages for this repository
+#   Settings -> Pages -> Source: "GitHub Actions"
+# This workflow will then publish on the next push to main (or manual dispatch).
+
+on:
+  push:
+    branches: [main]
+    paths: ['PRIVACY.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
