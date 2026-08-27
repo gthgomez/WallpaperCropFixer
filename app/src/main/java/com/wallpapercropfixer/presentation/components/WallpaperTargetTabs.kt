@@ -7,6 +7,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.wallpapercropfixer.R
 import com.wallpapercropfixer.domain.model.WallpaperTarget
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,14 +26,14 @@ fun WallpaperTargetTabs(
                 selected = target == selected,
                 onClick = { onSelect(target) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = targets.size),
-                label = { Text(target.label()) }
+                label = { Text(stringResource(target.labelRes())) }
             )
         }
     }
 }
 
-private fun WallpaperTarget.label() = when (this) {
-    WallpaperTarget.HOME -> "Home"
-    WallpaperTarget.LOCK -> "Lock"
-    WallpaperTarget.BOTH -> "Both"
+private fun WallpaperTarget.labelRes(): Int = when (this) {
+    WallpaperTarget.HOME -> R.string.target_home
+    WallpaperTarget.LOCK -> R.string.target_lock
+    WallpaperTarget.BOTH -> R.string.target_both
 }

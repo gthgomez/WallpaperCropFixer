@@ -9,9 +9,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.wallpapercropfixer.R
 import com.wallpapercropfixer.domain.model.CropMode
 
 @Composable
@@ -25,26 +27,28 @@ fun ModeChipRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         CropMode.entries.forEach { mode ->
+            val label = stringResource(mode.labelRes())
+            val a11y = stringResource(mode.a11yRes())
             FilterChip(
                 selected = mode == selected,
                 onClick = { onSelect(mode) },
-                label = { Text(mode.label()) },
+                label = { Text(label) },
                 modifier = Modifier
                     .padding(vertical = 4.dp)
-                    .semantics { contentDescription = mode.accessibilityDescription() }
+                    .semantics { contentDescription = a11y }
             )
         }
     }
 }
 
-private fun CropMode.label() = when (this) {
-    CropMode.SAFE_FIT -> "Safe Fit"
-    CropMode.BALANCED -> "Balanced"
-    CropMode.FILL -> "Fill"
+private fun CropMode.labelRes(): Int = when (this) {
+    CropMode.SAFE_FIT -> R.string.crop_mode_safe_fit
+    CropMode.BALANCED -> R.string.crop_mode_balanced
+    CropMode.FILL -> R.string.crop_mode_fill
 }
 
-private fun CropMode.accessibilityDescription() = when (this) {
-    CropMode.SAFE_FIT -> "Crop mode: Safe Fit — preserves the full photo, adds padding if needed"
-    CropMode.BALANCED -> "Crop mode: Balanced — balances coverage and subject preservation"
-    CropMode.FILL -> "Crop mode: Fill — covers the entire screen, may crop edges"
+private fun CropMode.a11yRes(): Int = when (this) {
+    CropMode.SAFE_FIT -> R.string.crop_mode_safe_fit_a11y
+    CropMode.BALANCED -> R.string.crop_mode_balanced_a11y
+    CropMode.FILL -> R.string.crop_mode_fill_a11y
 }

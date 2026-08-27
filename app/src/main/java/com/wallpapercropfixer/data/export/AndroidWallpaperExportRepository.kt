@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import com.wallpapercropfixer.domain.repository.ExportDestination
+import com.wallpapercropfixer.domain.repository.ExportResult
 import com.wallpapercropfixer.domain.repository.WallpaperExportRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -20,7 +22,7 @@ class AndroidWallpaperExportRepository @Inject constructor(
         fileName: String,
         format: Bitmap.CompressFormat,
         quality: Int
-    ): String {
+    ): ExportResult {
         val ext = if (format == Bitmap.CompressFormat.PNG) "png" else "jpg"
         val mimeType = if (format == Bitmap.CompressFormat.PNG) "image/png" else "image/jpeg"
         val fullName = "$fileName.$ext"
@@ -35,7 +37,7 @@ class AndroidWallpaperExportRepository @Inject constructor(
             }
 
             val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                ?: error("MediaStore insert returned null")
+                ?: throw IllegalStateException("MediaStore insert returned null")
 
             try {
                 val ok = context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -44,7 +46,7 @@ class AndroidWallpaperExportRepository @Inject constructor(
 
                 if (!ok) {
                     context.contentResolver.delete(uri, null, null)
-                    error("Bitmap compression failed for $fullName")
+                    throw IllegalStateException("Bitmap compression failed for $fullName")
                 }
 
                 values.clear()
@@ -52,22 +54,27 @@ class AndroidWallpaperExportRepository @Inject constructor(
                 val updatedRows = context.contentResolver.update(uri, values, null, null)
                 if (updatedRows <= 0) {
                     context.contentResolver.delete(uri, null, null)
-                    error("Failed to finalize MediaStore image for $fullName")
+                    throw IllegalStateException("Failed to finalize MediaStore image for $fullName")
                 }
 
-                uri.toString()
+                ExportResult(
+                    destination = ExportDestination.MEDIA_STORE,
+                    pathOrUri = uri.toString(),
+                    displayName = fullName
+                )
             } catch (e: Exception) {
                 runCatching { context.contentResolver.delete(uri, null, null) }
                 throw e
             }
         } else {
-            // API 28 and below: write to public Pictures if possible, otherwise app-specific external pictures directory
-            val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val baseDir = if (publicDir != null && (publicDir.canWrite() || publicDir.mkdirs())) {
-                File(publicDir, "WallpaperCropFixer")
+            // API 28 and below: no storage permission is declared, so write to app-specific
+            // external pictures storage (visible via a Files app, not the gallery).
+            // Intentionally does not request WRITE_EXTERNAL_STORAGE.
+            val externalPictures = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+            val baseDir = if (externalPictures != null) {
+                File(externalPictures, "WallpaperCropFixer")
             } else {
-                context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                    ?: File(context.filesDir, "WallpaperCropFixer")
+                File(context.filesDir, "WallpaperCropFixer")
             }
             baseDir.mkdirs()
 
@@ -76,10 +83,18 @@ class AndroidWallpaperExportRepository @Inject constructor(
                 val ok = bitmap.compress(format, quality, out)
                 if (!ok) {
                     file.delete()
-                    error("Bitmap compression failed for $file")
+                    throw IllegalStateException("Bitmap compression failed for $file")
                 }
             }
-            file.absolutePath
+            ExportResult(
+                destination = if (externalPictures != null) {
+                    ExportDestination.APP_EXTERNAL_FILES
+                } else {
+                    ExportDestination.APP_INTERNAL_FILES
+                },
+                pathOrUri = file.absolutePath,
+                displayName = fullName
+            )
         }
     }
 }

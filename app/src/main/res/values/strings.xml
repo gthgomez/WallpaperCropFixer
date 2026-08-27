@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Wallpaper Crop Fixer</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="settings">Settings</string>
+
+    <!-- Entry screen -->
+    <string name="entry_title">Wallpaper\nCrop Fixer</string>
+    <string name="entry_subtitle">Preview and fix how Android crops your photos before setting them as wallpaper.</string>
+    <string name="entry_choose_photo">Choose a Photo</string>
+    <string name="entry_preparing_photo">Preparing photo…</string>
+    <string name="entry_copy_failed">Couldn\'t read that photo. Try choosing it again.</string>
+    <string name="entry_feature_face_title">Face-aware crop</string>
+    <string name="entry_feature_face_desc">Centers framing on detected faces automatically</string>
+    <string name="entry_feature_modes_title">Three crop modes</string>
+    <string name="entry_feature_modes_desc">Safe Fit, Balanced, or Fill — choose what matters most</string>
+    <string name="entry_feature_preview_title">Framing preview</string>
+    <string name="entry_feature_preview_desc">Preview and optimize framing for your screen</string>
+
+    <!-- Editor screen -->
+    <string name="editor_title">Edit Wallpaper</string>
+    <string name="editor_reset_defaults">Reset to defaults</string>
+    <string name="editor_loading_photo">Loading photo…</string>
+    <string name="editor_tap_to_reposition">Tap preview to reposition focus</string>
+    <string name="editor_lock_adjusts_both">Lock screen preview · focus adjusts both</string>
+    <string name="editor_showing_lock">Showing lock screen</string>
+    <string name="editor_showing_home">Showing home screen</string>
+    <string name="editor_apply_to">Apply to</string>
+    <string name="editor_crop_mode">Crop mode</string>
+    <string name="editor_face_aware">Face-aware crop</string>
+    <string name="editor_face_aware_desc">Centers crop around detected faces</string>
+    <string name="editor_face_aware_toggle">Face-aware crop, %1$s</string>
+    <string name="editor_face_on">on</string>
+    <string name="editor_face_off">off</string>
+    <string name="editor_face_aware_unavailable">Face framing wasn\'t available for this photo, so center framing was used.</string>
+    <string name="editor_launcher_disclaimer">Your launcher may crop or zoom wallpapers differently from this preview.</string>
+    <string name="editor_low_resolution">Low resolution — may appear pixelated</string>
+    <string name="editor_device_info">%1$s %2$s · %3$d×%4$d</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_apply_wallpaper">Apply Wallpaper</string>
+    <string name="editor_applied_home">Wallpaper applied to home screen</string>
+    <string name="editor_applied_lock">Wallpaper applied to lock screen</string>
+    <string name="editor_applied_both">Wallpaper applied to home &amp; lock screen</string>
+
+    <plurals name="editor_faces_detected">
+        <item quantity="one">%1$d face detected</item>
+        <item quantity="other">%1$d faces detected</item>
+    </plurals>
+
+    <!-- Crop modes -->
+    <string name="crop_mode_safe_fit">Safe Fit</string>
+    <string name="crop_mode_balanced">Balanced</string>
+    <string name="crop_mode_fill">Fill</string>
+    <string name="crop_mode_safe_fit_desc">Full photo · adds padding</string>
+    <string name="crop_mode_balanced_desc">Balanced coverage</string>
+    <string name="crop_mode_fill_desc">Fills screen · may crop</string>
+    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — preserves the full photo, adds padding if needed</string>
+    <string name="crop_mode_balanced_a11y">Crop mode: Balanced — balances coverage and subject preservation</string>
+    <string name="crop_mode_fill_a11y">Crop mode: Fill — covers the entire screen, may crop edges</string>
+
+    <!-- Wallpaper targets -->
+    <string name="target_home">Home</string>
+    <string name="target_lock">Lock</string>
+    <string name="target_both">Both</string>
+
+    <!-- Preview frame -->
+    <string name="preview_frame_a11y">Tap to reposition crop focus point</string>
+    <string name="preview_image">Wallpaper preview</string>
+    <string name="preview_empty">Select a photo to preview</string>
+
+    <!-- Settings screen -->
+    <string name="settings_default_crop_mode">Default Crop Mode</string>
+    <string name="settings_default_target">Default Target</string>
+    <string name="settings_face_aware_default">Face-Aware Crop by Default</string>
+    <string name="settings_face_aware_desc">Centers crop on detected faces</string>
+    <string name="settings_face_aware_toggle">Face-aware crop by default, %1$s</string>
+    <string name="settings_export_quality">Export Quality</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+
+    <!-- Status / error messages (resolved via UiMessage) -->
+    <string name="error_load_image">Couldn\'t read that photo. Try choosing it again.</string>
+    <string name="error_preview">Couldn\'t generate the preview. Please try again.</string>
+    <string name="error_export">Couldn\'t save the wallpaper. Check available storage and try again.</string>
+    <string name="error_apply_generic">Couldn\'t set the wallpaper. Please try again.</string>
+    <string name="error_apply_unsupported">This device doesn\'t support changing wallpapers.</string>
+    <string name="error_apply_policy">Your device policy doesn\'t allow changing the wallpaper.</string>
+    <string name="error_apply_device">This device couldn\'t apply the wallpaper. Please try again.</string>
+    <string name="error_apply_both">Couldn\'t set the wallpaper on either screen. Please try again.</string>
+    <string name="error_apply_home_failed">Couldn\'t set the home screen wallpaper. (Lock screen was set.)</string>
+    <string name="error_apply_lock_failed">Couldn\'t set the lock screen wallpaper. (Home screen was set.)</string>
+    <string name="export_saved_media_store">Saved to Pictures/WallpaperCropFixer</string>
+    <string name="export_saved_media_store_both">Saved home &amp; lock wallpapers to Pictures/WallpaperCropFixer</string>
+    <string name="export_saved_app_external">Saved to your device\'s WallpaperCropFixer folder (open your Files app to find it)</string>
+    <string name="export_saved_app_external_both">Saved home &amp; lock wallpapers to your device\'s WallpaperCropFixer folder (open your Files app to find it)</string>
+    <string name="export_saved_app_internal">Saved to app storage</string>
+    <string name="export_saved_app_internal_both">Saved home &amp; lock wallpapers to app storage</string>
+</resources>
