@@ -24,7 +24,8 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 - Explicit backup rules (preferences only; photos never backed up).
 - Public privacy-policy publishing workflow (GitHub Pages) + proposed Data Safety worksheet.
 - 16 KB page alignment verified on the release APK (`zipalign -P 16`: Verification successful, all ABIs).
-- Dependency verification metadata (`gradle/verification-metadata.xml`) + CI dependency review + secrets scan.
+- Dependency supply chain: exact pinned versions (deterministic resolution) + CI dependency-review job
+  (activates once the owner enables Dependency Graph + GitHub Advanced Security) + gitleaks secrets scan.
 - 53 unit/Robolectric/Compose tests green, including concurrency, viewport-mapping, renderer-opacity, and fuzz invariant suites.
 
 ## In Progress / Remaining (non-code)
