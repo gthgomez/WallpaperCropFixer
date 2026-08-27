@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup decision (see WCF-025 / PRIVACY.md):
+
+    - Preferences (DataStore) are intentionally backed up so a user's default
+      crop mode, wallpaper target, face-aware preference, and export quality
+      survive a device transfer/reinstall.
+    - The cached copy of a selected photo lives in cacheDir and is never backed
+      up by Android by default — session photos are never persisted in cloud
+      backups. (Cache is excluded implicitly; no explicit rule is required.)
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="datastore" />
+</full-backup-content>
