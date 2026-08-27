@@ -1,6 +1,7 @@
 package com.wallpapercropfixer.presentation.editor
 
 import android.graphics.Bitmap
+import androidx.annotation.StringRes
 import com.wallpapercropfixer.domain.model.BackgroundFillMode
 import com.wallpapercropfixer.domain.model.CropMode
 import com.wallpapercropfixer.domain.model.DeviceProfile
@@ -10,6 +11,14 @@ import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.model.WallpaperBehaviorProfile
 import com.wallpapercropfixer.domain.model.WallpaperRenderPlan
 import com.wallpapercropfixer.domain.model.WallpaperTarget
+
+enum class FaceDetectionStatus { NOT_RUN, DETECTED, NO_FACES, FAILED }
+
+/**
+ * A user-facing message expressed as a string resource so the ViewModel never
+ * hardcodes user-visible text and the UI resolves the correct locale.
+ */
+data class UiMessage(@StringRes val resId: Int, val formatArgs: List<Any> = emptyList())
 
 data class EditorUiState(
     val isLoading: Boolean = false,
@@ -23,6 +32,7 @@ data class EditorUiState(
     val faceAwareEnabled: Boolean = true,
     val manualFocusPoint: FocusPoint? = null,
     val subjectAnalysis: SubjectAnalysis? = null,
+    val faceDetectionStatus: FaceDetectionStatus = FaceDetectionStatus.NOT_RUN,
     val renderPlan: WallpaperRenderPlan? = null,
     // Primary preview (HOME, or LOCK when target == LOCK)
     val previewBitmap: Bitmap? = null,
@@ -30,13 +40,9 @@ data class EditorUiState(
     val lockPreviewBitmap: Bitmap? = null,
     // Which of the two bitmaps the user is currently viewing in the frame
     val previewingLock: Boolean = false,
-    // Monotonically increasing counter — used as Crossfade key so the animation key is
-    // decoupled from the Bitmap reference, preventing reads on recycled bitmaps during fade
-    val previewRevision: Int = 0,
     val isRendering: Boolean = false,
-    val exportedPath: String? = null,
-    val errorMessage: String? = null,
-    val successMessage: String? = null
+    val errorMessage: UiMessage? = null,
+    val successMessage: UiMessage? = null
 ) {
     /** The bitmap currently shown in the device frame. */
     val activeBitmap: Bitmap?
