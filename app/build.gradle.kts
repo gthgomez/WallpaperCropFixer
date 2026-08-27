@@ -18,6 +18,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // Upload-key signing via environment variables so credentials are never
+            // committed. When absent, release falls back to the debug key so local
+            // builds and CI can still produce runnable artifacts; production uses
+            // Play App Signing with the upload key configured in Play Console
+            // (see OWNER ACTIONS BEFORE PLAY PRODUCTION).
+            val env = System.getenv()
+            val keystorePath = env["WCF_UPLOAD_KEYSTORE"]
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = env["WCF_UPLOAD_KEYSTORE_PASSWORD"] ?: ""
+                keyAlias = env["WCF_UPLOAD_KEY_ALIAS"] ?: ""
+                keyPassword = env["WCF_UPLOAD_KEY_PASSWORD"] ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -26,6 +44,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (System.getenv("WCF_UPLOAD_KEYSTORE").isNullOrBlank()) {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -106,6 +129,8 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.androidx.ui.test.manifest)
 
     // Instrumented tests
     androidTestImplementation(libs.androidx.test.ext.junit)
