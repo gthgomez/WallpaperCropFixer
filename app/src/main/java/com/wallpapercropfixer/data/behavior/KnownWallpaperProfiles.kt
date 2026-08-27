@@ -4,7 +4,9 @@ import com.wallpapercropfixer.domain.model.WallpaperBehaviorProfile
 
 /**
  * Seed profiles. These are best-effort estimates of OEM launcher behavior —
- * not guaranteed to match every device or launcher version.
+ * not guaranteed to match every device or launcher version. They are used only
+ * to size the rendered canvas; the launcher ultimately decides how a wallpaper
+ * is displayed (see PRIVACY/QA docs for the "optimize framing" guidance).
  */
 object KnownWallpaperProfiles {
 
@@ -12,52 +14,32 @@ object KnownWallpaperProfiles {
         WallpaperBehaviorProfile(
             profileId = "generic_default",
             brand = "generic",
-            launcherHint = null,
             homeWidthMultiplier = 1.10f,
-            lockWidthMultiplier = 1.0f,
-            cropBiasX = 0.5f,
-            cropBiasY = 0.5f,
-            separateTargetsSupported = true
+            lockWidthMultiplier = 1.0f
         ),
         WallpaperBehaviorProfile(
             profileId = "samsung_oneui_default",
             brand = "samsung",
-            launcherHint = "oneui",
             homeWidthMultiplier = 1.12f,
-            lockWidthMultiplier = 1.0f,
-            cropBiasX = 0.5f,
-            cropBiasY = 0.5f,
-            separateTargetsSupported = true
+            lockWidthMultiplier = 1.0f
         ),
         WallpaperBehaviorProfile(
             profileId = "google_pixel_default",
             brand = "google",
-            launcherHint = "pixel",
             homeWidthMultiplier = 1.08f,
-            lockWidthMultiplier = 1.0f,
-            cropBiasX = 0.5f,
-            cropBiasY = 0.5f,
-            separateTargetsSupported = true
+            lockWidthMultiplier = 1.0f
         ),
         WallpaperBehaviorProfile(
             profileId = "xiaomi_miui_default",
             brand = "xiaomi",
-            launcherHint = "miui",
             homeWidthMultiplier = 1.10f,
-            lockWidthMultiplier = 1.0f,
-            cropBiasX = 0.5f,
-            cropBiasY = 0.5f,
-            separateTargetsSupported = true
+            lockWidthMultiplier = 1.0f
         ),
         WallpaperBehaviorProfile(
             profileId = "oneplus_default",
             brand = "oneplus",
-            launcherHint = null,
             homeWidthMultiplier = 1.10f,
-            lockWidthMultiplier = 1.0f,
-            cropBiasX = 0.5f,
-            cropBiasY = 0.5f,
-            separateTargetsSupported = true
+            lockWidthMultiplier = 1.0f
         )
     )
 

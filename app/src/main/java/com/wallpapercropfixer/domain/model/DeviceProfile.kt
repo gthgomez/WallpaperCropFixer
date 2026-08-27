@@ -7,6 +7,5 @@ data class DeviceProfile(
     val screenWidthPx: Int,
     val screenHeightPx: Int,
     val density: Float,
-    val aspectRatio: Float,
-    val supportsSeparateLockScreen: Boolean
+    val aspectRatio: Float
 )
