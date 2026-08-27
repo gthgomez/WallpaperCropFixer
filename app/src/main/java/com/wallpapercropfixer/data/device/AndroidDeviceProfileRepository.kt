@@ -22,7 +22,10 @@ class AndroidDeviceProfileRepository @Inject constructor(
         val density: Float
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowMetrics = wm.currentWindowMetrics
+            // maximumWindowMetrics reflects the full display even in split-screen,
+            // multi-window, or partial-fold configurations, so the wallpaper canvas
+            // is always sized for the entire screen.
+            val windowMetrics = wm.maximumWindowMetrics
             width = windowMetrics.bounds.width()
             height = windowMetrics.bounds.height()
             density = context.resources.displayMetrics.density
@@ -35,9 +38,6 @@ class AndroidDeviceProfileRepository @Inject constructor(
             density = metrics.density
         }
 
-        val supportsSeparate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
-            WallpaperManager.getInstance(context).isWallpaperSupported
-
         return DeviceProfile(
             manufacturer = Build.MANUFACTURER,
             model = Build.MODEL,
@@ -45,8 +45,7 @@ class AndroidDeviceProfileRepository @Inject constructor(
             screenWidthPx = width,
             screenHeightPx = height,
             density = density,
-            aspectRatio = width.toFloat() / height.toFloat(),
-            supportsSeparateLockScreen = supportsSeparate
+            aspectRatio = width.toFloat() / height.toFloat()
         )
     }
 }

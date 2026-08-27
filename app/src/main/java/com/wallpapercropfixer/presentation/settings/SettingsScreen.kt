@@ -40,17 +40,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wallpapercropfixer.R
 import com.wallpapercropfixer.presentation.components.ModeChipRow
 import com.wallpapercropfixer.presentation.components.WallpaperTargetTabs
 
-/** Privacy policy URL — see PRIVACY.md. */
-internal const val PRIVACY_URL = "https://github.com/gthgomez/WallpaperCropFixer/blob/main/PRIVACY.md"
+/**
+ * Canonical public privacy policy URL (GitHub Pages). The repo-side publishing
+ * workflow (see .github/workflows/pages.yml) renders PRIVACY.md to
+ * /PRIVACY.html. Enabling GitHub Pages for the repository is an OWNER ACTION.
+ */
+internal const val PRIVACY_URL = "https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html"
 
 @Composable
 fun SettingsScreen(
@@ -78,12 +84,12 @@ fun SettingsScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.back),
                         tint = Color(0xFF333333)
                     )
                 }
                 Text(
-                    "Settings",
+                    stringResource(R.string.settings),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF111111)
                 )
@@ -97,14 +103,14 @@ fun SettingsScreen(
                     .navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SettingsCard(title = "Default Crop Mode") {
+                SettingsCard(title = stringResource(R.string.settings_default_crop_mode)) {
                     ModeChipRow(
                         selected = settings.defaultCropMode,
                         onSelect = { viewModel.update(settings.copy(defaultCropMode = it)) }
                     )
                 }
 
-                SettingsCard(title = "Default Target") {
+                SettingsCard(title = stringResource(R.string.settings_default_target)) {
                     WallpaperTargetTabs(
                         selected = settings.defaultWallpaperTarget,
                         onSelect = { viewModel.update(settings.copy(defaultWallpaperTarget = it)) },
@@ -112,16 +118,22 @@ fun SettingsScreen(
                     )
                 }
 
-                SettingsCard(title = "Face-Aware Crop by Default") {
+                SettingsCard(title = stringResource(R.string.settings_face_aware_default)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Centers crop on detected faces",
+                            stringResource(R.string.settings_face_aware_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF888888)
+                        )
+                        val settingsFaceOn = stringResource(R.string.editor_face_on)
+                        val settingsFaceOff = stringResource(R.string.editor_face_off)
+                        val settingsFaceToggleA11y = stringResource(
+                            R.string.settings_face_aware_toggle,
+                            if (settings.defaultFaceAwareEnabled) settingsFaceOn else settingsFaceOff
                         )
                         Switch(
                             checked = settings.defaultFaceAwareEnabled,
@@ -130,7 +142,7 @@ fun SettingsScreen(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
                             ),
                             modifier = Modifier.semantics {
-                                contentDescription = "Face-aware crop by default, ${if (settings.defaultFaceAwareEnabled) "on" else "off"}"
+                                contentDescription = settingsFaceToggleA11y
                             }
                         )
                     }
@@ -148,6 +160,7 @@ fun SettingsScreen(
                         // only when the delta is meaningful (> 0.5) to avoid resetting mid-drag from
                         // our own onValueChangeFinished write flowing back through the DataStore.
                         var localQuality by remember { mutableFloatStateOf(settings.exportJpegQuality.toFloat()) }
+                        val exportQualityLabel = stringResource(R.string.settings_export_quality)
                         LaunchedEffect(settings.exportJpegQuality) {
                             if (kotlin.math.abs(localQuality - settings.exportJpegQuality) > 0.5f) {
                                 localQuality = settings.exportJpegQuality.toFloat()
@@ -159,7 +172,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Export Quality",
+                                stringResource(R.string.settings_export_quality),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                                 color = Color(0xFF111111),
                                 modifier = Modifier.weight(1f)
@@ -194,7 +207,11 @@ fun SettingsScreen(
                                 thumbColor = MaterialTheme.colorScheme.primary,
                                 activeTrackColor = MaterialTheme.colorScheme.primary
                             ),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics {
+                                    contentDescription = "$exportQualityLabel ${localQuality.toInt()}%"
+                                }
                         )
 
                         Row(
@@ -208,7 +225,7 @@ fun SettingsScreen(
                 }
 
                 Text(
-                    text = "Privacy policy",
+                    text = stringResource(R.string.settings_privacy_policy),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier

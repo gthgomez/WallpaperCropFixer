@@ -17,19 +17,14 @@ class TargetCanvasSpecFactoryTest {
         screenWidthPx = 1440,
         screenHeightPx = 3120,
         density = 3.0f,
-        aspectRatio = 1440f / 3120f,
-        supportsSeparateLockScreen = true
+        aspectRatio = 1440f / 3120f
     )
 
     private val behavior = WallpaperBehaviorProfile(
         profileId = "test",
         brand = "test",
-        launcherHint = null,
         homeWidthMultiplier = 1.12f,
-        lockWidthMultiplier = 1.0f,
-        cropBiasX = 0.5f,
-        cropBiasY = 0.5f,
-        separateTargetsSupported = true
+        lockWidthMultiplier = 1.0f
     )
 
     @Test

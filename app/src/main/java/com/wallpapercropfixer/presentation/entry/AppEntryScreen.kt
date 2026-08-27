@@ -1,9 +1,7 @@
 package com.wallpapercropfixer.presentation.entry
 
-import android.content.Intent
+import android.content.Context
 import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,15 +33,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,10 +51,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.wallpapercropfixer.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
@@ -64,7 +70,8 @@ fun AppEntryScreen(
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
-    var permissionDenied by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var isPreparing by remember { mutableStateOf(false) }
     var copyError by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
@@ -72,43 +79,20 @@ fun AppEntryScreen(
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
 
-        // The Android photo picker (content://media/picker/…) issues a temporary grant
-        // tied to the activity result callback stack frame. The grant is revoked the
-        // moment this lambda returns — it is NOT persistable via takePersistableUriPermission,
-        // and any coroutine/IO dispatch loses the grant before openInputStream runs.
-        //
-        // Fix: copy bytes synchronously on the main thread, right here, before returning.
-        // Photos are typically 3–8 MB; copyTo() on a BufferedInputStream takes <150 ms —
-        // well within the ANR threshold and not noticeable to the user. The resulting
-        // file:// path is permanently accessible without any permissions.
-        val fileUri = runCatching {
-            val ext = when (context.contentResolver.getType(uri)) {
-                "image/png"  -> "png"
-                "image/webp" -> "webp"
-                "image/gif"  -> "gif"
-                else         -> "jpg"
+        // Copy the picked image into private cache storage off the main thread.
+        // The Photo Picker URI grant is valid for this activity session, so the
+        // short IO dispatch is safe. Copying to our own cache makes the file path
+        // stable for the whole editing session without any storage permission.
+        isPreparing = true
+        copyError = false
+        scope.launch {
+            val path = copyPickedImageToCache(context, uri)
+            isPreparing = false
+            if (path != null) {
+                onImageSelected(path)
+            } else {
+                copyError = true
             }
-            val dest = File(context.cacheDir, "wcf_pick_${System.currentTimeMillis()}.$ext")
-            context.contentResolver.openInputStream(uri)!!.use { input ->
-                dest.outputStream().buffered().use { out -> input.copyTo(out) }
-            }
-            dest.absolutePath   // pass a plain file path — no URI scheme needed
-        }.getOrNull()
-
-        if (fileUri != null) {
-            onImageSelected(fileUri)
-        } else {
-            copyError = true
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        } else {
-            permissionDenied = true
         }
     }
 
@@ -136,7 +120,7 @@ fun AppEntryScreen(
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     Icons.Default.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.settings),
                     tint = Color(0xFF888888)
                 )
             }
@@ -170,7 +154,7 @@ fun AppEntryScreen(
         Spacer(Modifier.height(28.dp))
 
         Text(
-            text = "Wallpaper\nCrop Fixer",
+            text = stringResource(R.string.entry_title),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Bold,
                 lineHeight = 44.sp
@@ -183,7 +167,7 @@ fun AppEntryScreen(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "Preview and fix how Android crops your photos before setting them as wallpaper.",
+            text = stringResource(R.string.entry_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF777777),
             textAlign = TextAlign.Center,
@@ -196,6 +180,7 @@ fun AppEntryScreen(
         // Primary CTA
         Button(
             onClick = { launchPicker() },
+            enabled = !isPreparing,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
@@ -209,70 +194,28 @@ fun AppEntryScreen(
                 pressedElevation = 2.dp
             )
         ) {
-            Icon(
-                Icons.Default.PhotoLibrary,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
+            if (isPreparing) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Icon(
+                    Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Spacer(Modifier.size(8.dp))
             Text(
-                "Choose a Photo",
+                if (isPreparing) stringResource(R.string.entry_preparing_photo)
+                else stringResource(R.string.entry_choose_photo),
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
             )
         }
 
         Spacer(Modifier.height(16.dp))
-
-        if (permissionDenied) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color(0xFFD32F2F),
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Photo access required",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color(0xFFB71C1C)
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Grant photo access in Settings so the app can read your images.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFB71C1C)
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        OutlinedButton(
-                            onClick = {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
-                                    }
-                                )
-                            },
-                            shape = RoundedCornerShape(50)
-                        ) {
-                            Text("Open Settings", color = Color(0xFFD32F2F))
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
 
         if (copyError) {
             Card(
@@ -295,7 +238,7 @@ fun AppEntryScreen(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
-                        "Couldn't read that photo. Try choosing it again.",
+                        stringResource(R.string.entry_copy_failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFB71C1C)
                     )
@@ -313,24 +256,64 @@ fun AppEntryScreen(
         ) {
             FeatureCard(
                 icon = Icons.Default.CenterFocusStrong,
-                title = "Face-aware crop",
-                description = "Detects faces and keeps them in frame automatically"
+                title = stringResource(R.string.entry_feature_face_title),
+                description = stringResource(R.string.entry_feature_face_desc)
             )
             FeatureCard(
                 icon = Icons.Default.AutoFixHigh,
-                title = "Three crop modes",
-                description = "Safe Fit, Balanced, or Fill — choose what matters most"
+                title = stringResource(R.string.entry_feature_modes_title),
+                description = stringResource(R.string.entry_feature_modes_desc)
             )
             FeatureCard(
                 icon = Icons.Default.Wallpaper,
-                title = "Framing preview",
-                description = "Preview and optimize framing for your screen"
+                title = stringResource(R.string.entry_feature_preview_title),
+                description = stringResource(R.string.entry_feature_preview_desc)
             )
         }
 
         Spacer(Modifier.height(40.dp))
     }
 }
+
+/**
+ * Copies the picked image bytes into a private cache file and returns the plain
+ * file path. Runs on IO. If the copy fails (or the scope is cancelled mid-copy),
+ * the partial file is removed and null is returned.
+ */
+private suspend fun copyPickedImageToCache(context: Context, uri: Uri): String? =
+    withContext(Dispatchers.IO) {
+        pruneOldPickFiles(context)
+        val ext = when (context.contentResolver.getType(uri)) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        val dest = File(context.cacheDir, "wcf_pick_${System.currentTimeMillis()}.$ext")
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: return@withContext null
+            input.use { src ->
+                dest.outputStream().buffered().use { out -> src.copyTo(out) }
+            }
+            dest.absolutePath
+        } catch (t: Throwable) {
+            runCatching { dest.delete() }
+            null
+        }
+    }
+
+/** Removes picker cache files older than one day so the cache stays bounded. */
+private fun pruneOldPickFiles(context: Context) {
+    val cutoff = System.currentTimeMillis() - PICK_FILE_TTL_MS
+    runCatching {
+        context.cacheDir.listFiles { f ->
+            f.name.startsWith("wcf_pick_") && f.lastModified() < cutoff
+        }?.forEach { runCatching { it.delete() } }
+    }
+}
+
+private const val PICK_FILE_TTL_MS = 24L * 60 * 60 * 1000
 
 @Composable
 private fun FeatureCard(icon: ImageVector, title: String, description: String) {
@@ -361,13 +344,13 @@ private fun FeatureCard(icon: ImageVector, title: String, description: String) {
             }
             Column {
                 Text(
-                    title,
+                    text = title,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF111111)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    description,
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
