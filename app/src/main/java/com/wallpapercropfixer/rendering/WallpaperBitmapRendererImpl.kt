@@ -13,6 +13,7 @@ import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.repository.ImageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 import javax.inject.Inject
 
 class WallpaperBitmapRendererImpl @Inject constructor(
@@ -28,11 +29,14 @@ class WallpaperBitmapRendererImpl @Inject constructor(
         val canvasW = plan.targetCanvasSpec.widthPx
         val canvasH = plan.targetCanvasSpec.heightPx
 
-        // Decode at up to 2× canvas resolution — large enough for quality, small enough for memory
+        // Decode at up to 2x canvas resolution, bounded by an explicit pixel budget so
+        // very large source photos never allocate memory proportional to their original
+        // megapixel count (a 50-100 MP photo decodes to at most ~14 MP here).
+        val (decodeMaxW, decodeMaxH) = decodeMaxDimensions(canvasW, canvasH)
         val sourceBitmap = imageRepository.decodeBitmapSampled(
             uri = request.source.uri,
-            maxWidth = canvasW * 2,
-            maxHeight = canvasH * 2
+            maxWidth = decodeMaxW,
+            maxHeight = decodeMaxH
         )
 
         // The sourceCropRect coordinates are in original image pixel space.
@@ -50,6 +54,11 @@ class WallpaperBitmapRendererImpl @Inject constructor(
 
         val output = Bitmap.createBitmap(canvasW, canvasH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
+
+        // Wallpapers must be visually opaque. Fill the canvas first so any source
+        // transparency or background alpha composites as black, matching wallpaper
+        // behavior on real devices rather than preview-only compositing.
+        canvas.drawColor(Color.BLACK)
 
         if (plan.usePadding) {
             drawBackground(canvas, sourceBitmap, canvasW, canvasH, plan.backgroundFillMode)
@@ -89,5 +98,26 @@ class WallpaperBitmapRendererImpl @Inject constructor(
         val srcRect = Rect(left, top, right, bottom)
         val dstRect = RectF(placement.left, placement.top, placement.right, placement.bottom)
         canvas.drawBitmap(source, srcRect, dstRect, Paint(Paint.FILTER_BITMAP_FLAG))
+    }
+
+    /**
+     * Computes decode dimensions bounded by the canvas requirement, an absolute
+     * side limit, and an explicit pixel budget. Exposed for tests.
+     */
+    internal fun decodeMaxDimensions(canvasW: Int, canvasH: Int): Pair<Int, Int> {
+        var maxW = (canvasW * 2f).toInt().coerceIn(1, MAX_DECODE_SIDE)
+        var maxH = (canvasH * 2f).toInt().coerceIn(1, MAX_DECODE_SIDE)
+        val area = maxW.toLong() * maxH
+        if (area > MAX_DECODE_PIXELS) {
+            val scale = sqrt(MAX_DECODE_PIXELS.toDouble() / area)
+            maxW = (maxW * scale).toInt().coerceAtLeast(1)
+            maxH = (maxH * scale).toInt().coerceAtLeast(1)
+        }
+        return maxW to maxH
+    }
+
+    companion object {
+        const val MAX_DECODE_PIXELS = 14_000_000L
+        const val MAX_DECODE_SIDE = 4096
     }
 }
