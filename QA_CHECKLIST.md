@@ -1,97 +1,149 @@
-# WallpaperCropFixer — Pre-Launch QA Checklist
+# WallpaperCropFixer — Pre-Release QA Checklist
 
-Source: ExactUploadFixer QA format adapted for wallpaper crop workflow.
-Run every item on a real device before hitting Publish.
+This checklist describes the **actual** application (focus-tap preview, crop modes,
+Home/Lock/Both targets, blur/gradient/solid backgrounds, Save/Apply). Every item is
+physically executable. Run each item on a real device before publishing.
 
----
-
-## 1. EXIF Orientation
-
-- [ ] **Rotated image (EXIF 90 degrees):** Final orientation is upright, no sideways output
-- [ ] **Rotated image (EXIF 270 degrees):** Final orientation is upright
-- [ ] **Flipped image (EXIF horizontal):** Orientation preserved correctly in output
-- [ ] **No EXIF image:** Extracted normally, assumed 0 degrees
-- [ ] **Orientation preserved in saved output:** Saved wallpaper has embedded correct orientation
-- [ ] **EXIF read before crop math:** Bounds are swapped correctly for rotated images
-
-**Pass criteria: 6/6 before publishing.**
+Legend: `[ ]` unchecked · `[x]` checked · device icon means "physical device required".
 
 ---
 
-## 2. Face Detection (ML Kit)
+## 1. Installation / startup
 
-- [ ] **Single face:** Crop rectangle centers correctly on the face
-- [ ] **Multiple faces:** Crop rectangle covers all detected faces
-- [ ] **No faces detected:** Falls back to center crop, no crash
-- [ ] **Partial face at edge:** Crop rectangle extends to include partial face
-- [ ] **Face detection loading:** Progress indicator shown during ML Kit initialization
-- [ ] **Face detection error:** Graceful fallback to center crop, clear error message
+- [ ] Clean install from a release build (debug builds are not a substitute for release QA)
+- [ ] App opens on the entry screen with title, subtitle, and "Choose a Photo" button
+- [ ] No storage/photo permission dialog is ever shown
+- [ ] Settings gear opens the settings screen and Back returns
 
-**Pass criteria: 6/6 before publishing.**
+## 2. Pick image
+
+- [ ] System Photo Picker opens when tapping "Choose a Photo"
+- [ ] Selecting a photo shows "Preparing photo…" then navigates to the editor
+- [ ] Choosing a GIF/PNG/WebP/JPEG/HEIC all load successfully
+- [ ] Cancelling the picker returns to the entry screen with no error
+
+## 3. Replace / reselect image
+
+- [ ] From the editor, going Back then choosing a different photo loads the new photo
+- [ ] **Rapid reselection:** choosing photo B while photo A is still processing never shows
+      photo A's preview or face analysis against photo B (stale results are discarded)
+- [ ] Rapidly changing crop mode / target / background never leaves a "failed" error
+- [ ] No crash when toggling options faster than the preview can render
+
+## 4. Face-aware crop (on-device ML Kit)
+
+- [ ] Portrait selfie: crop centers on the face
+- [ ] Group photo: crop covers all detected faces (Safe Fit) or reports them
+- [ ] No-face landscape: shows the "center framing was used" notice, no crash
+- [ ] Face near top edge: Safe Fit keeps the face in frame
+- [ ] Partially cropped face / sunglasses / profile face: no crash, sensible framing
+- [ ] Rotated (EXIF 90°/270°) photo: faces detected on the upright image
+- [ ] Mirrored selfie: orientation handled, no sideways result
+- [ ] Face-aware toggle OFF then ON re-runs detection on the current photo
+- [ ] Detection failure on a corrupt image: falls back to center framing with a notice
+
+## 5. Crop modes & background
+
+- [ ] Safe Fit ("Full photo · adds padding") preserves the whole photo with padding
+- [ ] Balanced covers most of the screen while keeping the subject
+- [ ] Fill covers the entire canvas (edges may be cropped)
+- [ ] Blur / Gradient / Solid backgrounds each render and apply correctly
+- [ ] Final wallpaper is opaque — no transparent or black-blended edges
+- [ ] Changing background mode updates the preview
+
+## 6. Focus / tap interaction
+
+- [ ] Tapping the preview relocates the focus crosshair to the tapped subject
+- [ ] Crosshair aligns with the actual subject on the preview (no offset for HOME target)
+- [ ] Tapping outside the image region is clamped safely
+- [ ] Reset (top-right icon) returns to defaults
+
+## 7. Targets: Home / Lock / Both
+
+- [ ] Home: preview reflects the wider home canvas
+- [ ] Lock: preview uses screen-width canvas
+- [ ] Both: "Showing home screen" / "Showing lock screen" toggle switches the preview
+- [ ] Launcher disclaimer ("Your launcher may crop or zoom wallpapers differently…")
+      is visible under the preview
+
+## 8. Apply wallpaper
+
+- [ ] Apply (Home) sets the home screen wallpaper
+- [ ] Apply (Lock) sets the lock screen wallpaper (on devices that support it)
+- [ ] Apply (Both) sets both; success message says so
+- [ ] Applying twice rapidly does not double-fire or crash
+- [ ] Device-policy-restricted profile shows the policy error message
+- [ ] Device without wallpaper support shows the unsupported message
+
+## 9. Save / export
+
+- [ ] Save (API 29+) writes to `Pictures/WallpaperCropFixer` and reports exactly that
+- [ ] Save (API 26–28) writes to the app's folder and reports the accurate location
+      (it must NOT claim the gallery path)
+- [ ] Saved file opens correctly in the gallery / Files app
+- [ ] Export quality slider (Settings) is honored
+- [ ] No available storage: friendly error, no silent failure
+
+## 10. Failure handling
+
+- [ ] Corrupt/truncated image: "Couldn't read that photo" — no crash
+- [ ] Unsupported image type: same friendly error
+- [ ] Unreadable URI (permission revoked): friendly error
+- [ ] Processing failure: "Couldn't generate the preview" — no internal exception text
+- [ ] Cancel/reselect during processing never shows "Job was cancelled" to the user
+
+## 11. Process recreation / lifecycle
+
+- [ ] Rotating the device keeps the edited image and re-frames for the new orientation
+- [ ] Backgrounding the app during face detection and returning does not crash
+- [ ] App killed and reopened restores the editor image and in-session options
+- [ ] Photo cache does not grow unboundedly across many picks
+
+## 12. Theme / accessibility
+
+- [ ] UI is legible at large font scaling (text not clipped, buttons usable)
+- [ ] TalkBack: every button/switch/chip has a meaningful label; preview has a description
+- [ ] Icon-only buttons have content descriptions; decorative icons are hidden
+- [ ] Focus/crosshair interaction is reachable with accessibility tools
+- [ ] Touch targets meet the 48dp minimum
+
+## 13. Version / OS coverage
+
+- [ ] API 26/28: picker works without permissions; export reports the app-folder path
+- [ ] API 35/36 (current Android): picker, preview, apply, save all work
+- [ ] 16 KB page-size compatibility verified on the release artifact (see release notes)
+- [ ] Foldable / multi-window: canvas uses the full display size, not the split window
+- [ ] Different aspect ratios (tall phones, tablets) render a sensible preview
+
+## 14. OEM wallpaper behavior (physical devices)
+
+- [ ] Samsung One UI: home/lock wallpaper applied correctly; note launcher cropping
+- [ ] Google Pixel: wallpaper applied; parallax/scroll behavior matches expectations
+- [ ] Motorola / OnePlus / Xiaomi: applied correctly, note any launcher cropping
+- [ ] Preview disclaimer wording matches observed launcher behavior
+
+## 15. Privacy
+
+- [ ] No `READ_EXTERNAL_STORAGE` / `READ_MEDIA_IMAGES` in the installed app
+- [ ] Settings → "Privacy policy" opens the public policy page (no login wall)
+- [ ] Data Safety answers match verified runtime behavior (capture traffic if possible)
+
+## 16. Release build
+
+- [ ] `bundleRelease` produces an AAB
+- [ ] `lintRelease` reports 0 errors
+- [ ] Unit/Robolectric test suite passes (including concurrency + Compose tests)
+- [ ] Release AAB installed via bundletool or Play Internal Testing runs the core journey
 
 ---
 
-## 3. Crop Math
+## Go / No-Go gate
 
-- [ ] **Aspect ratio correct:** Output matches selected aspect ratio exactly (no distortion)
-- [ ] **No distortion:** Image is not stretched, squished, or warped
-- [ ] **Crop handles work:** Dragging crop handles snaps/updates preview in real time
-- [ ] **Crop rectangle constraints:** Cannot drag crop outside image bounds
-- [ ] **Aspect ratio switch:** Changing aspect ratio recalculates crop correctly
-- [ ] **Landscape vs. portrait:** Both orientations work correctly
+Ship when every checkbox above is checked on at least one modern device and one
+API 26–28 device. The governing sentence:
 
-**Pass criteria: 6/6 before publishing.**
+> "If the preview, the applied wallpaper, and the saved file ever disagree about
+> what the user configured, we are not ready."
 
----
-
-## 4. Export Quality
-
-- [ ] **Output resolution:** Resolution matches device wallpaper requirements
-- [ ] **Output format:** JPEG or PNG as expected, no quality loss beyond original
-- [ ] **Wallpaper set directly:** Set as wallpaper action works (if implemented)
-- [ ] **Save to device:** File saved with correct dimensions and format
-- [ ] **Large photo (12+ MP):** Processes without OOM or ANR
-
-**Pass criteria: 5/5 before publishing.**
-
----
-
-## 5. Permissions & Privacy
-
-- [ ] **Manifest audit:** `READ_MEDIA_IMAGES` **not** declared; `READ_EXTERNAL_STORAGE` has `maxSdkVersion="32"` only
-- [ ] **Android 13+ device:** Photo Picker opens with **no** permission dialog
-- [ ] **Android 14 device:** Photo Picker works, no permission dialog
-- [ ] **Android 15 device:** Photo Picker works, no permission dialog
-- [ ] **API 32 or below:** Legacy picker may prompt for `READ_EXTERNAL_STORAGE`; deny → clear error, grant → picker works
-- [ ] **Export path:** MediaStore write to `Pictures/WallpaperCropFixer` on API 29+ (no storage permission)
-- [ ] **Set wallpaper:** `SET_WALLPAPER` applies cropped bitmap via `WallpaperManager` (on-device only)
-- [ ] **No `WRITE_EXTERNAL_STORAGE`:** Not declared in manifest
-- [ ] **Settings privacy link:** Opens placeholder `https://example.invalid/wallpaper-crop-fixer-privacy`
-
-**Pass criteria: 9/9 before publishing.**
-
----
-
-## 6. UI and Free Flow
-
-- [ ] **Pick photo → Crop screen:** Photo loads with correct aspect ratio
-- [ ] **Crop preview is accurate:** What you see in preview matches output exactly
-- [ ] **Drag crop handles:** Smooth, responsive, follows touch
-- [ ] **Aspect ratio selector:** Tapping preset correctly recalculates
-- [ ] **Reset crop:** Returns to initial crop state
-- [ ] **Set wallpaper / Save action:** Works correctly
-- [ ] **Dark mode:** UI renders correctly
-- [ ] **Landscape orientation:** No layout overflow or crash
-
-**Pass criteria: 8/8 before publishing.**
-
----
-
-## 7. Go / No-Go Gate
-
-**Ship when all boxes are checked.**
-
-If face detection fails on a common photo, the app must fall back to center crop — not crash or produce a blank wallpaper.
-
-The one sentence that governs every decision:
-> "If this does not directly help a user set the perfect wallpaper right now, cut it."
+Physical-device items that cannot be run in your environment must be explicitly
+marked `BLOCKED — PHYSICAL DEVICE QA REQUIRED`, not assumed passing.
