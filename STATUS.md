@@ -1,7 +1,7 @@
 # WallpaperCropFixer Status
 
 **Last verified:** 2026-08-27
-**Status:** release-candidate engineering complete / awaiting device QA + Play Console owner actions
+**Status:** engineering hardening in progress / verification path ready / awaiting device QA + Play Console owner actions
 **Confidence:** high (build, lint, unit/Robolectric/Compose tests, dependency verification all green)
 
 ## Purpose
@@ -10,7 +10,7 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 ## Verified Capabilities
 
-- Release AAB builds (R8/minify + resource shrinking enabled) and passes lint (0 errors).
+- Explicit `releaseVerification` AAB/APK builds run R8/resource shrinking and are not upload-ready; `bundleRelease` fails closed without runtime signing inputs.
 - Full EXIF orientation matrix mapping (orientations 1–8) and upright canonical bounds calculation.
 - Bundled ML Kit Face Detection with bounded decode budget (max 14 MP decode, 4096 px side) preventing OOM/memory amplification on 50–100 MP images; sequential HOME/LOCK rendering.
 - Concurrency-safe editor: generation-token preview/load pipeline; stale results are discarded; cancellation never surfaces as a user error.
@@ -23,28 +23,28 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 - Manifest contains only `SET_WALLPAPER` (+ dependency-merged INTERNET for ML Kit telemetry, disclosed in PRIVACY.md).
 - Explicit backup rules (preferences only; photos never backed up).
 - Public privacy-policy publishing workflow (GitHub Pages) + proposed Data Safety worksheet.
-- 16 KB page alignment verified on the release APK (`zipalign -P 16`: Verification successful, all ABIs).
-- Dependency supply chain: exact pinned versions (deterministic resolution) + CI dependency-review job
-  (activates once the owner enables Dependency Graph + GitHub Advanced Security) + gitleaks secrets scan.
-- 53 unit/Robolectric/Compose tests green, including concurrency, viewport-mapping, renderer-opacity, and fuzz invariant suites.
+- 16 KB verification is split into APK ZIP, AAB `PAGE_ALIGNMENT_16K`, and native ELF checks in `tools/release-preflight.ps1`.
+- CI uses explicit action SHAs, checksum-verified gitleaks, and a truthful dependency declaration policy; GitHub's vulnerability review remains unavailable until the owner enables the required repository security features.
+- Unit/Robolectric/Compose tests include deterministic revision-race coverage for preview, Apply, Save, and BOTH pairing.
 
 ## In Progress / Remaining (non-code)
 
 - **Physical-device QA matrix** (Samsung One UI, Pixel, API 26–28 legacy storage) — see QA_CHECKLIST.md.
-- **GitHub Pages enablement** for the privacy-policy URL (OWNER ACTION).
+- **GitHub Pages enablement** for the privacy-policy URL (OWNER ACTION; current deploy failed with GitHub Pages 404).
+- **Public developer/entity and privacy contact** must replace explicit owner fields in `PRIVACY.md`.
 - **Play Console Data Safety form** based on the PRIVACY.md worksheet (OWNER ACTION).
 - **Upload-key signing / Play App Signing** configuration (OWNER ACTION; env-var signing is wired in `app/build.gradle.kts`).
 - Closed testing (12+ testers / 14 days) and production access application.
 
 ## Blockers
 
-- None in code. All WCF-001…WCF-027 findings addressed; remaining items are owner/device/Play Console actions documented in the release report.
+- No known unaddressed code blocker after local verification; public privacy hosting/contact, vulnerability database gate, physical QA, and secure signing remain external gates.
 
 ## Verification
 
 - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug`
-- `.\gradlew.bat :app:lintRelease :app:assembleRelease :app:bundleRelease`
-- `zipalign -c -P 16 -v 4 app-release.apk` → "Verification successful"
+- `.\gradlew.bat :app:lintDebug :app:lintReleaseVerification :app:testDebugUnitTest :app:assembleDebug :app:assembleReleaseVerification :app:bundleReleaseVerification`
+- `pwsh -File tools/release-preflight.ps1 -RepoRoot . -BundletoolPath <pinned bundletool jar> -GitleaksPath <pinned gitleaks binary>`
 
 ## Evidence Sources
 

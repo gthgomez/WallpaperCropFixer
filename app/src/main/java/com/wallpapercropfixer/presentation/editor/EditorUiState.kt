@@ -10,7 +10,22 @@ import com.wallpapercropfixer.domain.model.SourceImageMeta
 import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.model.WallpaperBehaviorProfile
 import com.wallpapercropfixer.domain.model.WallpaperRenderPlan
+import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
+
+/** The immutable render inputs and outputs committed as one authoritative revision. */
+data class RenderedPreview(
+    val request: WallpaperRenderRequest,
+    val plan: WallpaperRenderPlan,
+    val bitmap: Bitmap
+)
+
+data class PublishedPreview(
+    val revision: Long,
+    val target: WallpaperTarget,
+    val home: RenderedPreview,
+    val lock: RenderedPreview? = null
+)
 
 enum class FaceDetectionStatus { NOT_RUN, DETECTED, NO_FACES, FAILED }
 
@@ -33,17 +48,31 @@ data class EditorUiState(
     val manualFocusPoint: FocusPoint? = null,
     val subjectAnalysis: SubjectAnalysis? = null,
     val faceDetectionStatus: FaceDetectionStatus = FaceDetectionStatus.NOT_RUN,
-    val renderPlan: WallpaperRenderPlan? = null,
-    // Primary preview (HOME, or LOCK when target == LOCK)
-    val previewBitmap: Bitmap? = null,
-    // Secondary preview only populated when target == BOTH
-    val lockPreviewBitmap: Bitmap? = null,
+    val publishedPreview: PublishedPreview? = null,
     // Which of the two bitmaps the user is currently viewing in the frame
     val previewingLock: Boolean = false,
     val isRendering: Boolean = false,
+    val isApplying: Boolean = false,
+    val isExporting: Boolean = false,
     val errorMessage: UiMessage? = null,
     val successMessage: UiMessage? = null
 ) {
+    /** Primary preview (HOME, or LOCK when target == LOCK). */
+    val previewBitmap: Bitmap?
+        get() = publishedPreview?.home?.bitmap
+
+    /** Secondary preview only populated when target == BOTH. */
+    val lockPreviewBitmap: Bitmap?
+        get() = publishedPreview?.lock?.bitmap
+
+    /** The plan that belongs to the currently published bitmap. */
+    val renderPlan: WallpaperRenderPlan?
+        get() = publishedPreview?.home?.plan
+
+    /** True while any operation can invalidate or consume the current preview. */
+    val isBusy: Boolean
+        get() = isLoading || isRendering || isApplying || isExporting
+
     /** The bitmap currently shown in the device frame. */
     val activeBitmap: Bitmap?
         get() = if (previewingLock && lockPreviewBitmap != null) lockPreviewBitmap else previewBitmap
