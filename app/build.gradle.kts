@@ -5,6 +5,33 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val uploadArtifactTasks = setOf("assembleRelease", "bundleRelease", "packageRelease")
+val uploadTaskRequested = gradle.startParameter.taskNames.any { requestedTask ->
+    uploadArtifactTasks.any { requestedTask.endsWith(it) }
+}
+val releaseCredentialNames = listOf(
+    "RELEASE_STORE_FILE",
+    "RELEASE_STORE_PASSWORD",
+    "RELEASE_KEY_ALIAS",
+    "RELEASE_KEY_PASSWORD"
+)
+val releaseCredentials = if (uploadTaskRequested) {
+    releaseCredentialNames.associateWith { name -> System.getenv(name).orEmpty() }
+} else {
+    emptyMap()
+}
+val missingReleaseCredentials = releaseCredentialNames.filter { name ->
+    releaseCredentials[name].isNullOrBlank()
+}
+
+if (uploadTaskRequested && missingReleaseCredentials.isNotEmpty()) {
+    throw GradleException(
+        "Upload-ready release tasks require runtime-only signing inputs: " +
+            missingReleaseCredentials.joinToString() + ". " +
+            "Use :app:bundleReleaseVerification for unsigned-boundary CI verification."
+    )
+}
+
 android {
     namespace = "com.wallpapercropfixer"
     compileSdk = 36
@@ -16,22 +43,23 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // The bundled ML Kit native payload is 16 KB-aligned for these
+            // 64-bit ABIs. Excluding 32-bit ABIs prevents shipping an AAB that
+            // cannot satisfy the 16 KB native ELF release invariant.
+            abiFilters += setOf("arm64-v8a", "x86_64")
+        }
     }
 
-    signingConfigs {
-        create("release") {
-            // Upload-key signing via environment variables so credentials are never
-            // committed. When absent, release falls back to the debug key so local
-            // builds and CI can still produce runnable artifacts; production uses
-            // Play App Signing with the upload key configured in Play Console
-            // (see OWNER ACTIONS BEFORE PLAY PRODUCTION).
-            val env = System.getenv()
-            val keystorePath = env["WCF_UPLOAD_KEYSTORE"]
-            if (!keystorePath.isNullOrBlank()) {
-                storeFile = file(keystorePath)
-                storePassword = env["WCF_UPLOAD_KEYSTORE_PASSWORD"] ?: ""
-                keyAlias = env["WCF_UPLOAD_KEY_ALIAS"] ?: ""
-                keyPassword = env["WCF_UPLOAD_KEY_PASSWORD"] ?: ""
+    if (uploadTaskRequested) {
+        signingConfigs {
+            create("releaseUpload") {
+                // Values are read only for an explicitly requested upload-semantic
+                // task and are injected by the future dedicated release domain.
+                storeFile = file(releaseCredentials.getValue("RELEASE_STORE_FILE"))
+                storePassword = releaseCredentials.getValue("RELEASE_STORE_PASSWORD")
+                keyAlias = releaseCredentials.getValue("RELEASE_KEY_ALIAS")
+                keyPassword = releaseCredentials.getValue("RELEASE_KEY_PASSWORD")
             }
         }
     }
@@ -44,12 +72,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (System.getenv("WCF_UPLOAD_KEYSTORE").isNullOrBlank()) {
-                signingConfigs.getByName("debug")
-            } else {
-                signingConfigs.getByName("release")
-            }
         }
+        create("releaseVerification") {
+            // Explicit CI/dev verification artifact. It is not upload-ready and
+            // is intentionally debug-signed so it can be installed locally.
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+        }
+    }
+
+    if (uploadTaskRequested) {
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("releaseUpload")
     }
 
     compileOptions {

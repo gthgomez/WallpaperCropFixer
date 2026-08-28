@@ -1,7 +1,6 @@
 package com.wallpapercropfixer.presentation.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +29,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -160,12 +160,15 @@ fun SettingsScreen(
                         // only when the delta is meaningful (> 0.5) to avoid resetting mid-drag from
                         // our own onValueChangeFinished write flowing back through the DataStore.
                         var localQuality by remember { mutableFloatStateOf(settings.exportJpegQuality.toFloat()) }
-                        val exportQualityLabel = stringResource(R.string.settings_export_quality)
                         LaunchedEffect(settings.exportJpegQuality) {
                             if (kotlin.math.abs(localQuality - settings.exportJpegQuality) > 0.5f) {
                                 localQuality = settings.exportJpegQuality.toFloat()
                             }
                         }
+                        val qualityDescription = stringResource(
+                            R.string.settings_export_quality_value,
+                            localQuality.toInt()
+                        )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -186,7 +189,7 @@ fun SettingsScreen(
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    "${localQuality.toInt()}%",
+                                    stringResource(R.string.settings_export_quality_value, localQuality.toInt()),
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -210,28 +213,26 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .semantics {
-                                    contentDescription = "$exportQualityLabel ${localQuality.toInt()}%"
-                                }
+                                     contentDescription = qualityDescription
+                                 }
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("60%", style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
-                            Text("100%", style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
+                            Text(stringResource(R.string.settings_export_quality_min), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
+                            Text(stringResource(R.string.settings_export_quality_max), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
                         }
                     }
                 }
 
-                Text(
-                    text = stringResource(R.string.settings_privacy_policy),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .padding(top = 4.dp, bottom = 8.dp)
-                        .clickable { uriHandler.openUri(PRIVACY_URL) }
-                )
+                TextButton(
+                    onClick = { uriHandler.openUri(PRIVACY_URL) },
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                ) {
+                    Text(stringResource(R.string.settings_privacy_policy))
+                }
 
                 Spacer(Modifier.height(16.dp))
             }
