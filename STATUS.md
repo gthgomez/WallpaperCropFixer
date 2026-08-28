@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-08-27
 **Status:** engineering hardening in progress / verification path ready / awaiting device QA + Play Console owner actions
-**Confidence:** high (build, lint, unit/Robolectric/Compose tests, dependency verification all green)
+**Confidence:** high for local engineering verification (build, lint, unit/Robolectric/Compose tests, dependency declaration, packaging, and secret scan green); GitHub-hosted CI is currently blocked before job start by the account billing/spending-limit state.
 
 ## Purpose
 
@@ -25,12 +25,14 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 - Public privacy-policy publishing workflow (GitHub Pages) + proposed Data Safety worksheet.
 - 16 KB verification is split into APK ZIP, AAB `PAGE_ALIGNMENT_16K`, and native ELF checks in `tools/release-preflight.ps1`.
 - CI uses explicit action SHAs, checksum-verified gitleaks, and a truthful dependency declaration policy; GitHub's vulnerability review remains unavailable until the owner enables the required repository security features.
+- The PR workflow is actionlint-valid, but PR #2's GitHub jobs were not started because GitHub reports failed recent payments or an insufficient Actions spending limit; this is not reported as a passing CI run.
 - Unit/Robolectric/Compose tests include deterministic revision-race coverage for preview, Apply, Save, and BOTH pairing.
 
 ## In Progress / Remaining (non-code)
 
 - **Physical-device QA matrix** (Samsung One UI, Pixel, API 26–28 legacy storage) — see QA_CHECKLIST.md.
 - **GitHub Pages enablement** for the privacy-policy URL (OWNER ACTION; current deploy failed with GitHub Pages 404).
+- **GitHub Actions billing/spending limit** must be repaired before hosted CI can provide final green job evidence (PR #2 run `33129249156`).
 - **Public developer/entity and privacy contact** must replace explicit owner fields in `PRIVACY.md`.
 - **Play Console Data Safety form** based on the PRIVACY.md worksheet (OWNER ACTION).
 - **Upload-key signing / Play App Signing** configuration (OWNER ACTION; env-var signing is wired in `app/build.gradle.kts`).
@@ -38,7 +40,7 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 ## Blockers
 
-- No known unaddressed code blocker after local verification; public privacy hosting/contact, vulnerability database gate, physical QA, and secure signing remain external gates.
+- No known unaddressed code blocker after local verification; hosted CI billing, public privacy hosting/contact, vulnerability database gate, physical QA, and secure signing remain external gates.
 
 ## Verification
 

@@ -5,15 +5,15 @@ physical or Play item is not an automated PASS.
 
 ## AUTOMATED — VERIFIED
 
-- [ ] Run `:app:testDebugUnitTest`; includes crop math/property tests, viewport transforms, renderer opacity, image decode bounds, export destinations, Compose semantics, and deterministic ViewModel revision races.
-- [ ] Run `:app:lintDebug` and `:app:lintReleaseVerification`; zero errors.
-- [ ] Run `:app:assembleReleaseVerification` and `:app:bundleReleaseVerification`; R8 and resource shrinking complete.
-- [ ] Run `pwsh -File tools/release-preflight.ps1 -RepoRoot . -BundletoolPath <pinned jar> -GitleaksPath <pinned binary>`; record PASS/FAIL/OWNER ACTION output.
-- [ ] Confirm `:app:bundleRelease` fails closed when the four `RELEASE_*` signing inputs are absent.
-- [ ] Confirm merged verification manifest contains only expected permissions and no exported debug/provider component.
-- [ ] Confirm APK ZIP alignment, AAB `PAGE_ALIGNMENT_16K`, and every packaged native ELF LOAD segment independently.
-- [ ] Confirm no tracked `local.properties`, keystore, certificate private key, signing password, `.env`, or test personal data.
-- [ ] Confirm backup/data-extraction rules include only DataStore preferences and exclude cache/source photos.
+- [x] Local: `:app:testDebugUnitTest`; 57 tests passed, including crop math/property tests, viewport transforms, renderer opacity, image decode bounds, export destinations, Compose semantics, and deterministic ViewModel revision races.
+- [x] Local: `:app:lintDebug` and `:app:lintReleaseVerification`; zero errors.
+- [x] Local: `:app:assembleReleaseVerification` and `:app:bundleReleaseVerification`; R8 and resource shrinking complete.
+- [x] Local: `pwsh -File tools/release-preflight.ps1 ...`; automated checks PASS, with explicit OWNER ACTION and PHYSICAL DEVICE REQUIRED results.
+- [x] Local: `:app:bundleRelease` fails closed when the four `RELEASE_*` signing inputs are absent.
+- [x] Local: merged verification manifest contains only expected permissions and no exported debug/provider component.
+- [x] Local: APK ZIP alignment, AAB `PAGE_ALIGNMENT_16K`, and every packaged native ELF LOAD segment independently pass.
+- [x] Local: no tracked `local.properties`, keystore, certificate private key, signing password, `.env`, or test personal data.
+- [x] Source/config review: backup/data-extraction rules include only DataStore preferences and exclude cache/source photos.
 
 ## EMULATOR — VERIFIED / BLOCKED
 
