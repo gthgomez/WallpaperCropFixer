@@ -18,3 +18,13 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk
 ```
 
 **Detailed docs:** [AGENTS.md](AGENTS.md) | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | [STATUS.md](STATUS.md) | [PRIVACY.md](PRIVACY.md) | [QA_CHECKLIST.md](QA_CHECKLIST.md)
+
+## License
+
+License: Proprietary — source available for viewing; this project is not open source.
+
+Copyright is retained by the project owner. No permission is granted to
+redistribute, modify, sublicense, sell, commercially exploit, or create
+derivative works from this project except where required by applicable law.
+Third-party dependencies, including ML Kit, remain under their own licenses.
+See [`LICENSE.md`](LICENSE.md).
