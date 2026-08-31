@@ -18,3 +18,8 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk
 ```
 
 **Detailed docs:** [AGENTS.md](AGENTS.md) | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | [STATUS.md](STATUS.md) | [PRIVACY.md](PRIVACY.md) | [QA_CHECKLIST.md](QA_CHECKLIST.md)
+
+## License
+
+Source code is publicly viewable for development and transparency purposes. This project is not open source. See [LICENSE.md](LICENSE.md) for permitted use. Third-party libraries and SDKs retain their own licenses.
+
