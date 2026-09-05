@@ -22,7 +22,7 @@ Install via `adb install -r app-release.apk`-equivalent from a local signed/debu
 | 7 | Tap-to-reposition | Tap different frame regions | Crop focus follows taps; manual focus wins over face/center |
 | 8 | Safe Fit mode | Wide photo, >20% would crop | Letterbox appears; background = blurred image (default) |
 | 9 | Balanced + Fill modes | Toggle >40% threshold; Fill | Balanced letterboxes; Fill never letterboxes |
-| 10 | Letterbox backgrounds | Cycle blurred / gradient / solid | All three render in letterbox areas |
+| 10 | Letterbox background (blur) | Wide photo in Safe Fit | Letterbox areas show the blurred-image background (the shipped default; gradient/solid options are post-launch — no UI exists yet) |
 | 11 | Apply to HOME | Target Home → Apply | Home wallpaper matches preview; success feedback shown |
 | 12 | Apply to LOCK | Target Lock → Apply | Lock wallpaper matches preview |
 | 13 | Apply BOTH + preview toggle | Target Both → Apply; toggle Home/Lock preview | Both surfaces change; per-surface preview toggle reflects each |
