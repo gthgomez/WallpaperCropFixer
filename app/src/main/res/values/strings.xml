@@ -8,8 +8,8 @@
     <string name="settings">Settings</string>
 
     <!-- Entry screen -->
-    <string name="entry_title">Wallpaper\nCrop Fixer</string>
-    <string name="entry_subtitle">Preview and fix how Android crops your photos before setting them as wallpaper.</string>
+    <string name="entry_title">Wallpaper Crop Fixer</string>
+    <string name="entry_subtitle">Preview how your photo will fit before you set it as your wallpaper.</string>
     <string name="entry_choose_photo">Choose a Photo</string>
     <string name="entry_preparing_photo">Preparing photo…</string>
     <string name="entry_copy_failed">Couldn\'t read that photo. Try choosing it again.</string>
@@ -18,7 +18,7 @@
     <string name="entry_feature_modes_title">Three crop modes</string>
     <string name="entry_feature_modes_desc">Safe Fit, Balanced, or Fill — choose what matters most</string>
     <string name="entry_feature_preview_title">Framing preview</string>
-    <string name="entry_feature_preview_desc">Preview and optimize framing for your screen</string>
+    <string name="entry_feature_preview_desc">Preview how your photo will fit your screen</string>
 
     <!-- Editor screen -->
     <string name="editor_title">Edit Wallpaper</string>
@@ -38,8 +38,8 @@
     <string name="editor_face_aware_unavailable">Face framing wasn\'t available for this photo, so center framing was used.</string>
     <string name="editor_launcher_disclaimer">Your launcher may crop or zoom wallpapers differently from this preview.</string>
     <string name="editor_low_resolution">Low resolution — may appear pixelated</string>
-    <string name="editor_device_info">%1$s %2$s · %3$d×%4$d</string>
-    <string name="editor_save">Save</string>
+    <string name="editor_device_info">Optimized for your %1$s %2$s screen</string>
+    <string name="editor_save">Save image</string>
     <string name="editor_apply_wallpaper">Apply Wallpaper</string>
     <string name="editor_applied_home">Wallpaper applied to home screen</string>
     <string name="editor_applied_lock">Wallpaper applied to lock screen</string>
@@ -67,7 +67,11 @@
     <string name="target_both">Both</string>
 
     <!-- Preview frame -->
-    <string name="preview_frame_a11y">Tap to reposition crop focus point</string>
+    <string name="preview_frame_a11y">Wallpaper preview. Tap to reposition the crop focus point.</string>
+    <string name="a11y_focus_move_left">Move crop focus left</string>
+    <string name="a11y_focus_move_right">Move crop focus right</string>
+    <string name="a11y_focus_move_up">Move crop focus up</string>
+    <string name="a11y_focus_move_down">Move crop focus down</string>
     <string name="preview_image">Wallpaper preview</string>
     <string name="preview_empty">Select a photo to preview</string>
 
@@ -98,6 +102,6 @@
     <string name="export_saved_media_store_both">Saved home &amp; lock wallpapers to Pictures/WallpaperCropFixer</string>
     <string name="export_saved_app_external">Saved to your device\'s WallpaperCropFixer folder (open your Files app to find it)</string>
     <string name="export_saved_app_external_both">Saved home &amp; lock wallpapers to your device\'s WallpaperCropFixer folder (open your Files app to find it)</string>
-    <string name="export_saved_app_internal">Saved to app storage</string>
-    <string name="export_saved_app_internal_both">Saved home &amp; lock wallpapers to app storage</string>
+    <string name="export_saved_app_internal">Saved to the app\'s internal storage — it won\'t appear in your gallery</string>
+    <string name="export_saved_app_internal_both">Saved home &amp; lock wallpapers to the app\'s internal storage — they won\'t appear in your gallery</string>
 </resources>

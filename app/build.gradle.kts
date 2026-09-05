@@ -146,9 +146,6 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // Coil
-    implementation(libs.coil.compose)
-
     // ML Kit Face Detection
     implementation(libs.mlkit.face.detection)
 

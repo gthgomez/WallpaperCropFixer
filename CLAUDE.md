@@ -13,7 +13,7 @@ Agent-neutral startup router for the WallpaperCropFixer Android app. Root `ENGIN
 ## Local Rules
 
 - `PROJECT_CONTEXT.md` is the canonical app-local context for all agents.
-- This app uses Hilt, DataStore, Coil, ML Kit face detection, and EXIF handling.
+- This app uses Hilt, DataStore, ML Kit face detection, and EXIF handling.
 - Do not assume the parent Project_Android "manual DI only" pattern applies here.
 - Treat image crop math, EXIF handling, file/export behavior, and Android manifest changes as high risk.
 

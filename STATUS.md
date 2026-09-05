@@ -1,8 +1,8 @@
 # WallpaperCropFixer Status
 
 **Last verified:** 2026-09-05
-**Status:** release-hardening revision under review (PR #2) / awaiting device QA + Play Console owner actions
-**Confidence:** high for local engineering verification (build, lint, unit/Robolectric/Compose tests, dependency declaration, packaging, and secret scan green); GitHub-hosted CI execution resumed on 2026-08-31 after the earlier billing/spending-limit block cleared, and this revision's hosted results are visible on the PR #2 checks.
+**Status:** 1.0 release candidate (RC1) — bounded polish complete; awaiting physical-device QA + Play Console owner actions
+**Confidence:** high for engineering and release-trust verification. Hosted CI is green on PR #2 (executed 2026-09-05 after the earlier billing block cleared); post-merge main re-verified locally the same day. See `docs/release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md` for the full gate record and `docs/release/OWNER_ACTIONS.md` for the owner handoff.
 
 ## Purpose
 
