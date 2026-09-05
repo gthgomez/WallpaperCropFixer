@@ -239,7 +239,7 @@ fun WallpaperEditorScreen(
                     )
                 }
 
-                if (state.isRendering) {
+                if (state.isBusy) {
                     CircularProgressIndicator(
                         color = Color.White,
                         strokeWidth = 2.dp,
@@ -493,7 +493,7 @@ fun WallpaperEditorScreen(
             ) {
                 OutlinedButton(
                     onClick = { viewModel.exportWallpaper() },
-                    enabled = state.previewBitmap != null && !state.isRendering,
+                    enabled = state.previewBitmap != null && !state.isBusy,
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
@@ -511,7 +511,7 @@ fun WallpaperEditorScreen(
                         }
                         viewModel.applyWallpaper()
                     },
-                    enabled = state.previewBitmap != null && !state.isRendering,
+                    enabled = state.previewBitmap != null && !state.isBusy,
                     modifier = Modifier
                         .weight(2f)
                         .height(52.dp),

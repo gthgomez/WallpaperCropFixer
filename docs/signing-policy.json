@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "application_id": "com.wallpapercropfixer",
+  "signing_role": "Google Play upload key injected by the dedicated release domain",
+  "verification_artifact": {
+    "build_type": "releaseVerification",
+    "tasks": [
+      ":app:assembleReleaseVerification",
+      ":app:bundleReleaseVerification"
+    ],
+    "upload_ready": false,
+    "signing": "debug certificate for local/CI verification only"
+  },
+  "upload_artifact": {
+    "tasks": [":app:assembleRelease", ":app:bundleRelease"],
+    "required_runtime_inputs": [
+      "RELEASE_STORE_FILE",
+      "RELEASE_STORE_PASSWORD",
+      "RELEASE_KEY_ALIAS",
+      "RELEASE_KEY_PASSWORD"
+    ],
+    "fail_closed_when_inputs_missing": true,
+    "certificate_sha256": null,
+    "certificate_owner_action": "Record the dedicated release-domain upload certificate after Play setup; do not commit private key material."
+  },
+  "play_app_signing": {
+    "app_signing_key_holder": "Google Play",
+    "upload_key_holder": "Dedicated release domain",
+    "configured": false
+  }
+}

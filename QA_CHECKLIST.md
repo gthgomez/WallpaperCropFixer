@@ -1,149 +1,74 @@
-# WallpaperCropFixer — Pre-Release QA Checklist
+# WallpaperCropFixer — Release and Play QA Checklist
 
-This checklist describes the **actual** application (focus-tap preview, crop modes,
-Home/Lock/Both targets, blur/gradient/solid backgrounds, Save/Apply). Every item is
-physically executable. Run each item on a real device before publishing.
+Every item below is executable and has an explicit evidence owner. An unchecked
+physical or Play item is not an automated PASS.
 
-Legend: `[ ]` unchecked · `[x]` checked · device icon means "physical device required".
+## AUTOMATED — VERIFIED
 
----
+- [x] Local: `:app:testDebugUnitTest`; 57 tests passed, including crop math/property tests, viewport transforms, renderer opacity, image decode bounds, export destinations, Compose semantics, and deterministic ViewModel revision races.
+- [x] Local: `:app:lintDebug` and `:app:lintReleaseVerification`; zero errors.
+- [x] Local: `:app:assembleReleaseVerification` and `:app:bundleReleaseVerification`; R8 and resource shrinking complete.
+- [x] Local: `pwsh -File tools/release-preflight.ps1 ...`; automated checks PASS, with explicit OWNER ACTION and PHYSICAL DEVICE REQUIRED results.
+- [x] Local: `:app:bundleRelease` fails closed when the four `RELEASE_*` signing inputs are absent.
+- [x] Local: merged verification manifest contains only expected permissions and no exported debug/provider component.
+- [x] Local: APK ZIP alignment, AAB `PAGE_ALIGNMENT_16K`, and every packaged native ELF LOAD segment independently pass.
+- [x] Local: no tracked `local.properties`, keystore, certificate private key, signing password, `.env`, or test personal data.
+- [x] Source/config review: backup/data-extraction rules include only DataStore preferences and exclude cache/source photos.
 
-## 1. Installation / startup
+## EMULATOR — VERIFIED / BLOCKED
 
-- [ ] Clean install from a release build (debug builds are not a substitute for release QA)
-- [ ] App opens on the entry screen with title, subtitle, and "Choose a Photo" button
-- [ ] No storage/photo permission dialog is ever shown
-- [ ] Settings gear opens the settings screen and Back returns
+- [ ] Launch the verification APK on an API 35/36 emulator.
+- [ ] Exercise entry screen, mocked/test image selection path, editor render, crop mode change, target change, focus tap, Save, and Apply where the emulator supports wallpaper APIs.
+- [ ] Recreate the activity/process and record whether navigation returns to the editor with the selected image. Current implementation persists editor options only; it does not claim automatic editor-route reconstruction after a cold app restart.
+- [ ] Run large-image fixtures where the emulator has sufficient memory; record failures rather than inferring physical-device behavior.
+- [ ] Instrumented Compose semantics smoke is not a required CI matrix because no emulator is provisioned in the inexpensive deterministic workflow.
 
-## 2. Pick image
+## PHYSICAL DEVICE — REQUIRED
 
-- [ ] System Photo Picker opens when tapping "Choose a Photo"
-- [ ] Selecting a photo shows "Preparing photo…" then navigates to the editor
-- [ ] Choosing a GIF/PNG/WebP/JPEG/HEIC all load successfully
-- [ ] Cancelling the picker returns to the entry screen with no error
+Minimum matrix:
 
-## 3. Replace / reselect image
+| Device class | Required checks |
+|---|---|
+| Modern Android 15/16-class phone | Photo Picker, EXIF-rotated image, face/no-face/multi-face, Safe Fit/Balanced/Fill, blur/gradient/solid, HOME/LOCK/BOTH, Save, Apply, rotation, large and very large photos, HEIC |
+| Legacy API 26–28 device | Picker without storage permission, rendering, Apply where supported, Save to app-specific external folder and truthful message |
+| Samsung One UI | HOME/LOCK/BOTH wallpaper behavior, launcher crop/zoom/parallax, face-aware framing |
+| Google Pixel | HOME/LOCK/BOTH behavior, launcher crop/zoom/parallax, face-aware framing |
+| Available Motorola/OnePlus/Xiaomi | Repeat HOME/LOCK/BOTH and launcher behavior checks; record only devices actually tested |
 
-- [ ] From the editor, going Back then choosing a different photo loads the new photo
-- [ ] **Rapid reselection:** choosing photo B while photo A is still processing never shows
-      photo A's preview or face analysis against photo B (stale results are discarded)
-- [ ] Rapidly changing crop mode / target / background never leaves a "failed" error
-- [ ] No crash when toggling options faster than the preview can render
+Also verify with TalkBack, large font/display scaling, dark/system mode, landscape,
+split-screen, tablet/foldable-sized windows, long OEM labels, revoked URI,
+corrupt/unsupported image, insufficient storage, wallpaper policy restriction,
+unsupported lock screen, cancellation during load/render/apply/save, and repeated
+rapid Apply/Save taps. Capture memory/OOM behavior for 50 MP, 100 MP, extreme
+panorama/tall images, blur backgrounds, HOME+LOCK, and export/apply after render.
 
-## 4. Face-aware crop (on-device ML Kit)
+Privacy traffic capture must separately verify the app's own network behavior,
+ML Kit destinations, that selected photo bytes do not leave the device, and that
+only expected diagnostic data is emitted:
 
-- [ ] Portrait selfie: crop centers on the face
-- [ ] Group photo: crop covers all detected faces (Safe Fit) or reports them
-- [ ] No-face landscape: shows the "center framing was used" notice, no crash
-- [ ] Face near top edge: Safe Fit keeps the face in frame
-- [ ] Partially cropped face / sunglasses / profile face: no crash, sensible framing
-- [ ] Rotated (EXIF 90°/270°) photo: faces detected on the upright image
-- [ ] Mirrored selfie: orientation handled, no sideways result
-- [ ] Face-aware toggle OFF then ON re-runs detection on the current photo
-- [ ] Detection failure on a corrupt image: falls back to center framing with a notice
+**BLOCKED — PHYSICAL DEVICE PRIVACY VERIFICATION REQUIRED** until executed.
 
-## 5. Crop modes & background
+## PLAY CONSOLE — OWNER ACTION
 
-- [ ] Safe Fit ("Full photo · adds padding") preserves the whole photo with padding
-- [ ] Balanced covers most of the screen while keeping the subject
-- [ ] Fill covers the entire canvas (edges may be cropped)
-- [ ] Blur / Gradient / Solid backgrounds each render and apply correctly
-- [ ] Final wallpaper is opaque — no transparent or black-blended edges
-- [ ] Changing background mode updates the preview
+- [ ] Replace `OWNER_PROVIDE_PLAY_DEVELOPER_ENTITY` and `OWNER_PROVIDE_PUBLIC_PRIVACY_CONTACT` in `PRIVACY.md`.
+- [ ] Enable GitHub Pages for the private repository if the account/plan supports it, then verify the privacy URL with an unauthenticated HTTP request. Current evidence is a Pages deployment 404.
+- [ ] Enter the privacy URL in Play Console and link the same policy from the app.
+- [ ] Complete Data Safety using the advisory worksheet and physical traffic evidence.
+- [ ] Complete content rating and target-audience questionnaires using the packet; do not claim unsupported features.
+- [ ] Upload only the dedicated release-domain artifact signed with the future upload key. Verification artifacts are never Play-upload artifacts.
+- [ ] For personal accounts created after 13 November 2023, if applicable, run a closed test with at least 12 opted-in testers continuously for at least 14 days before requesting production access.
+- [ ] Collect tester feedback on the core workflow: choose photo → adjust framing → preview → Save/Apply; record device/OS/OEM and failures.
 
-## 6. Focus / tap interaction
+## SIGNING — SEPARATE RELEASE SYSTEM
 
-- [ ] Tapping the preview relocates the focus crosshair to the tapped subject
-- [ ] Crosshair aligns with the actual subject on the preview (no offset for HOME target)
-- [ ] Tapping outside the image region is clamped safely
-- [ ] Reset (top-right icon) returns to defaults
+- [ ] Dedicated release domain injects `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD` at runtime only.
+- [ ] Verify the upload certificate against the Play Console upload-key record in that domain; record only the public fingerprint in the owner-controlled release record.
+- [ ] Do not generate, access, persist, or request key material in this repository or ordinary CI.
 
-## 7. Targets: Home / Lock / Both
+## Go / no-go interpretation
 
-- [ ] Home: preview reflects the wider home canvas
-- [ ] Lock: preview uses screen-width canvas
-- [ ] Both: "Showing home screen" / "Showing lock screen" toggle switches the preview
-- [ ] Launcher disclaimer ("Your launcher may crop or zoom wallpapers differently…")
-      is visible under the preview
-
-## 8. Apply wallpaper
-
-- [ ] Apply (Home) sets the home screen wallpaper
-- [ ] Apply (Lock) sets the lock screen wallpaper (on devices that support it)
-- [ ] Apply (Both) sets both; success message says so
-- [ ] Applying twice rapidly does not double-fire or crash
-- [ ] Device-policy-restricted profile shows the policy error message
-- [ ] Device without wallpaper support shows the unsupported message
-
-## 9. Save / export
-
-- [ ] Save (API 29+) writes to `Pictures/WallpaperCropFixer` and reports exactly that
-- [ ] Save (API 26–28) writes to the app's folder and reports the accurate location
-      (it must NOT claim the gallery path)
-- [ ] Saved file opens correctly in the gallery / Files app
-- [ ] Export quality slider (Settings) is honored
-- [ ] No available storage: friendly error, no silent failure
-
-## 10. Failure handling
-
-- [ ] Corrupt/truncated image: "Couldn't read that photo" — no crash
-- [ ] Unsupported image type: same friendly error
-- [ ] Unreadable URI (permission revoked): friendly error
-- [ ] Processing failure: "Couldn't generate the preview" — no internal exception text
-- [ ] Cancel/reselect during processing never shows "Job was cancelled" to the user
-
-## 11. Process recreation / lifecycle
-
-- [ ] Rotating the device keeps the edited image and re-frames for the new orientation
-- [ ] Backgrounding the app during face detection and returning does not crash
-- [ ] App killed and reopened restores the editor image and in-session options
-- [ ] Photo cache does not grow unboundedly across many picks
-
-## 12. Theme / accessibility
-
-- [ ] UI is legible at large font scaling (text not clipped, buttons usable)
-- [ ] TalkBack: every button/switch/chip has a meaningful label; preview has a description
-- [ ] Icon-only buttons have content descriptions; decorative icons are hidden
-- [ ] Focus/crosshair interaction is reachable with accessibility tools
-- [ ] Touch targets meet the 48dp minimum
-
-## 13. Version / OS coverage
-
-- [ ] API 26/28: picker works without permissions; export reports the app-folder path
-- [ ] API 35/36 (current Android): picker, preview, apply, save all work
-- [ ] 16 KB page-size compatibility verified on the release artifact (see release notes)
-- [ ] Foldable / multi-window: canvas uses the full display size, not the split window
-- [ ] Different aspect ratios (tall phones, tablets) render a sensible preview
-
-## 14. OEM wallpaper behavior (physical devices)
-
-- [ ] Samsung One UI: home/lock wallpaper applied correctly; note launcher cropping
-- [ ] Google Pixel: wallpaper applied; parallax/scroll behavior matches expectations
-- [ ] Motorola / OnePlus / Xiaomi: applied correctly, note any launcher cropping
-- [ ] Preview disclaimer wording matches observed launcher behavior
-
-## 15. Privacy
-
-- [ ] No `READ_EXTERNAL_STORAGE` / `READ_MEDIA_IMAGES` in the installed app
-- [ ] Settings → "Privacy policy" opens the public policy page (no login wall)
-- [ ] Data Safety answers match verified runtime behavior (capture traffic if possible)
-
-## 16. Release build
-
-- [ ] `bundleRelease` produces an AAB
-- [ ] `lintRelease` reports 0 errors
-- [ ] Unit/Robolectric test suite passes (including concurrency + Compose tests)
-- [ ] Release AAB installed via bundletool or Play Internal Testing runs the core journey
-
----
-
-## Go / No-Go gate
-
-Ship when every checkbox above is checked on at least one modern device and one
-API 26–28 device. The governing sentence:
-
-> "If the preview, the applied wallpaper, and the saved file ever disagree about
-> what the user configured, we are not ready."
-
-Physical-device items that cannot be run in your environment must be explicitly
-marked `BLOCKED — PHYSICAL DEVICE QA REQUIRED`, not assumed passing.
+Engineering automation may be green while owner/device sections remain open. The
+minimum internal-testing verdict requires the verification build and packet plus
+owner-provided public privacy identity/contact and a working unauthenticated
+privacy URL. Production readiness additionally requires the secure signing
+system, physical-device evidence, and applicable Play testing/access actions.

@@ -78,6 +78,9 @@
     <string name="settings_face_aware_desc">Centers crop on detected faces</string>
     <string name="settings_face_aware_toggle">Face-aware crop by default, %1$s</string>
     <string name="settings_export_quality">Export Quality</string>
+    <string name="settings_export_quality_value">%1$d%%</string>
+    <string name="settings_export_quality_min">60%%</string>
+    <string name="settings_export_quality_max">100%%</string>
     <string name="settings_privacy_policy">Privacy policy</string>
 
     <!-- Status / error messages (resolved via UiMessage) -->

@@ -48,9 +48,10 @@ import javax.inject.Inject
  * immutable snapshot before any asynchronous work begins, and every publish is
  * guarded by a monotonically increasing generation token. This makes the preview,
  * the selected options, and any applied/exported bitmap always correspond to the
- * same render generation. Bitmaps that are published to the UI are intentionally
- * NOT manually recycled — Compose and the apply/export paths may reference them,
- * and GC reclaims replaced previews safely.
+ * same render generation. A committed operation owns the immutable PublishedPreview
+ * it captured; later option changes invalidate publication without changing the
+ * operation's inputs. Bitmaps are intentionally never manually recycled because
+ * Compose and committed operations may still reference them.
  */
 @HiltViewModel
 class EditorViewModel @Inject constructor(
@@ -77,6 +78,15 @@ class EditorViewModel @Inject constructor(
 
     private var previewJob: Job? = null
     private var loadJob: Job? = null
+
+    @Volatile
+    private var publishedRevision = 0L
+
+    @Volatile
+    private var applyOperationToken = 0L
+
+    @Volatile
+    private var exportOperationToken = 0L
 
     init {
         // Restore in-session options from process-death state synchronously (primitives only).
@@ -122,6 +132,9 @@ class EditorViewModel @Inject constructor(
         }
 
         val gen = ++loadGeneration
+        ++previewGeneration
+        ++applyOperationToken
+        ++exportOperationToken
         savedStateHandle[KEY_IMAGE_URI] = uri
         previewJob?.cancel()
         loadJob?.cancel()
@@ -138,11 +151,12 @@ class EditorViewModel @Inject constructor(
                     behaviorProfile = null,
                     subjectAnalysis = null,
                     faceDetectionStatus = FaceDetectionStatus.NOT_RUN,
-                    renderPlan = null,
-                    previewBitmap = null,
-                    lockPreviewBitmap = null,
+                    publishedPreview = null,
                     manualFocusPoint = null,
-                    previewingLock = false
+                    previewingLock = false,
+                    isRendering = false,
+                    isApplying = false,
+                    isExporting = false
                 )
             }
 
@@ -196,24 +210,28 @@ class EditorViewModel @Inject constructor(
     }
 
     fun setCropMode(mode: CropMode) {
+        invalidatePublishedPreview()
         savedStateHandle[KEY_CROP_MODE] = mode.name
         _uiState.update { it.copy(cropMode = mode) }
         generatePreview()
     }
 
     fun setWallpaperTarget(target: WallpaperTarget) {
+        invalidatePublishedPreview()
         savedStateHandle[KEY_TARGET] = target.name
         _uiState.update { it.copy(wallpaperTarget = target, previewingLock = false) }
         generatePreview()
     }
 
     fun setBackgroundFillMode(mode: BackgroundFillMode) {
+        invalidatePublishedPreview()
         savedStateHandle[KEY_FILL_MODE] = mode.name
         _uiState.update { it.copy(backgroundFillMode = mode) }
         generatePreview()
     }
 
     fun toggleFaceAware(enabled: Boolean) {
+        invalidatePublishedPreview()
         savedStateHandle[KEY_FACE_AWARE] = enabled
         _uiState.update { it.copy(faceAwareEnabled = enabled, manualFocusPoint = null) }
 
@@ -250,6 +268,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun updateManualFocusPoint(point: com.wallpapercropfixer.domain.model.FocusPoint?) {
+        invalidatePublishedPreview()
         _uiState.update { it.copy(manualFocusPoint = point, faceAwareEnabled = false) }
         savedStateHandle[KEY_FACE_AWARE] = false
         generatePreview()
@@ -263,6 +282,7 @@ class EditorViewModel @Inject constructor(
     fun resetToDefaults() {
         viewModelScope.launch {
             val settings = runCatching { settingsRepository.observeSettings().first() }.getOrDefault(UserSettings())
+            invalidatePublishedPreview()
             savedStateHandle[KEY_CROP_MODE] = settings.defaultCropMode.name
             savedStateHandle[KEY_TARGET] = settings.defaultWallpaperTarget.name
             savedStateHandle[KEY_FILL_MODE] = settings.defaultBackgroundFillMode.name
@@ -287,6 +307,7 @@ class EditorViewModel @Inject constructor(
      */
     fun refreshForConfigurationChange() {
         if (_uiState.value.sourceImageMeta == null || _uiState.value.isLoading) return
+        invalidatePublishedPreview()
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val deviceProfile = getDeviceProfile()
@@ -307,7 +328,16 @@ class EditorViewModel @Inject constructor(
         previewJob?.cancel()
 
         // Disable apply/save immediately and atomically with the option change.
-        _uiState.update { it.copy(isRendering = true, errorMessage = null) }
+        val revision = ++publishedRevision
+        _uiState.update {
+            it.copy(
+                isRendering = true,
+                publishedPreview = null,
+                previewingLock = false,
+                errorMessage = null,
+                successMessage = null
+            )
+        }
 
         // Capture every render input as an immutable snapshot before launching work.
         val isBoth = state.wallpaperTarget == WallpaperTarget.BOTH
@@ -336,21 +366,25 @@ class EditorViewModel @Inject constructor(
                     null
                 }
 
-                if (!isCurrentPreviewGeneration(generation)) {
-                    // This result is stale — discard it and its resources without touching state.
-                    homeBitmap.recycle()
-                    lockBitmap?.recycle()
-                    return@launch
-                }
-
                 _uiState.update {
-                    it.copy(
-                        isRendering = false,
-                        renderPlan = homePlan,
-                        previewBitmap = homeBitmap,
-                        lockPreviewBitmap = lockBitmap,
-                        previewingLock = false
-                    )
+                    if (generation != previewGeneration) {
+                        it
+                    } else {
+                        it.copy(
+                            isRendering = false,
+                            publishedPreview = PublishedPreview(
+                                revision = revision,
+                                target = state.wallpaperTarget,
+                                home = RenderedPreview(homeRequest, homePlan, homeBitmap),
+                                lock = if (lockRequest != null && lockPlan != null && lockBitmap != null) {
+                                    RenderedPreview(lockRequest, lockPlan, lockBitmap)
+                                } else {
+                                    null
+                                }
+                            ),
+                            previewingLock = false
+                        )
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -367,30 +401,50 @@ class EditorViewModel @Inject constructor(
 
     fun exportWallpaper(quality: Int? = null) {
         val state = _uiState.value
-        val homeBitmap = state.previewBitmap ?: return
-        if (state.isRendering) return
+        val published = state.publishedPreview ?: return
+        if (state.isBusy) return
 
-        _uiState.update { it.copy(isRendering = true, errorMessage = null, successMessage = null) }
+        val operationToken = ++exportOperationToken
+        val operationGeneration = previewGeneration
+        val operationRevision = published.revision
+
+        _uiState.update {
+            it.copy(isExporting = true, errorMessage = null, successMessage = null)
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val effectiveQuality = quality
                     ?: runCatching { settingsRepository.observeSettings().first().exportJpegQuality }.getOrDefault(92)
 
-                val homeExport = exportWallpaper(homeBitmap, FileNameFactory.wallpaperFileName("wcf_home"), effectiveQuality)
-                val lockExport = state.lockPreviewBitmap?.let {
-                    exportWallpaper(it, FileNameFactory.wallpaperFileName("wcf_lock"), effectiveQuality)
+                val homeExport = exportWallpaper(
+                    published.home.bitmap,
+                    FileNameFactory.wallpaperFileName("wcf_home"),
+                    effectiveQuality
+                )
+                val lockExport = published.lock?.let {
+                    exportWallpaper(
+                        it.bitmap,
+                        FileNameFactory.wallpaperFileName("wcf_lock"),
+                        effectiveQuality
+                    )
                 }
 
-                _uiState.update {
-                    it.copy(isRendering = false, successMessage = exportSuccessMessage(homeExport, lockExport))
-                }
+                finishExport(
+                    operationToken,
+                    operationRevision,
+                    operationGeneration,
+                    successMessage = exportSuccessMessage(homeExport, lockExport)
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(isRendering = false, errorMessage = UiMessage(R.string.error_export))
-                }
+                finishExport(
+                    operationToken,
+                    operationRevision,
+                    operationGeneration,
+                    errorMessage = UiMessage(R.string.error_export)
+                )
                 Logger.e("exportWallpaper failed", t)
             }
         }
@@ -398,19 +452,23 @@ class EditorViewModel @Inject constructor(
 
     fun applyWallpaper() {
         val state = _uiState.value
-        val homeBitmap = state.previewBitmap ?: return
-        if (state.isRendering) return
+        val published = state.publishedPreview ?: return
+        if (state.isBusy) return
 
-        val target = state.wallpaperTarget
-        val lockBitmap = state.lockPreviewBitmap
+        val operationToken = ++applyOperationToken
+        val operationGeneration = previewGeneration
+        val operationRevision = published.revision
+        val target = published.target
 
-        _uiState.update { it.copy(isRendering = true, errorMessage = null, successMessage = null) }
+        _uiState.update {
+            it.copy(isApplying = true, errorMessage = null, successMessage = null)
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = if (target == WallpaperTarget.BOTH && lockBitmap != null) {
-                    val homeResult = applyWallpaper(homeBitmap, WallpaperTarget.HOME)
-                    val lockResult = applyWallpaper(lockBitmap, WallpaperTarget.LOCK)
+                val result = if (target == WallpaperTarget.BOTH && published.lock != null) {
+                    val homeResult = applyWallpaper(published.home.bitmap, WallpaperTarget.HOME)
+                    val lockResult = applyWallpaper(published.lock.bitmap, WallpaperTarget.LOCK)
                     when {
                         homeResult.isSuccess && lockResult.isSuccess -> Result.success(Unit)
                         homeResult.isFailure && lockResult.isFailure ->
@@ -421,26 +479,35 @@ class EditorViewModel @Inject constructor(
                             Result.failure(LockScreenApplyFailedException())
                     }
                 } else {
-                    applyWallpaper(homeBitmap, target)
+                    applyWallpaper(published.home.bitmap, target)
                 }
 
                 result
                     .onSuccess {
-                        _uiState.update {
-                            it.copy(isRendering = false, successMessage = UiMessage(appliedRes(target)))
-                        }
+                        finishApply(
+                            operationToken,
+                            operationRevision,
+                            operationGeneration,
+                            successMessage = UiMessage(appliedRes(target))
+                        )
                     }
                     .onFailure { t ->
-                        _uiState.update {
-                            it.copy(isRendering = false, errorMessage = UiMessage(applyErrorRes(t)))
-                        }
+                        finishApply(
+                            operationToken,
+                            operationRevision,
+                            operationGeneration,
+                            errorMessage = UiMessage(applyErrorRes(t))
+                        )
                     }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(isRendering = false, errorMessage = UiMessage(R.string.error_apply_generic))
-                }
+                finishApply(
+                    operationToken,
+                    operationRevision,
+                    operationGeneration,
+                    errorMessage = UiMessage(R.string.error_apply_generic)
+                )
                 Logger.e("applyWallpaper failed", t)
             }
         }
@@ -450,6 +517,71 @@ class EditorViewModel @Inject constructor(
     fun clearSuccess() { _uiState.update { it.copy(successMessage = null) } }
 
     private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration
+
+    /**
+     * Closes the publication window before a mutable editor option changes. This
+     * ordering prevents an operation completion from certifying revision A after
+     * the UI has already started describing configuration B.
+     */
+    private fun invalidatePublishedPreview() {
+        ++previewGeneration
+        previewJob?.cancel()
+        _uiState.update { state ->
+            state.copy(
+                publishedPreview = null,
+                isRendering = state.sourceImageMeta != null &&
+                    state.deviceProfile != null &&
+                    state.behaviorProfile != null,
+                errorMessage = null,
+                successMessage = null,
+                previewingLock = false
+            )
+        }
+    }
+
+    private fun finishExport(
+        operationToken: Long,
+        operationRevision: Long,
+        operationGeneration: Int,
+        successMessage: UiMessage? = null,
+        errorMessage: UiMessage? = null
+    ) {
+        _uiState.update { state ->
+            if (operationToken != exportOperationToken) {
+                state
+            } else {
+                val stillAuthoritative = operationGeneration == previewGeneration &&
+                    state.publishedPreview?.revision == operationRevision
+                state.copy(
+                    isExporting = false,
+                    successMessage = if (stillAuthoritative) successMessage else state.successMessage,
+                    errorMessage = if (stillAuthoritative) errorMessage else state.errorMessage
+                )
+            }
+        }
+    }
+
+    private fun finishApply(
+        operationToken: Long,
+        operationRevision: Long,
+        operationGeneration: Int,
+        successMessage: UiMessage? = null,
+        errorMessage: UiMessage? = null
+    ) {
+        _uiState.update { state ->
+            if (operationToken != applyOperationToken) {
+                state
+            } else {
+                val stillAuthoritative = operationGeneration == previewGeneration &&
+                    state.publishedPreview?.revision == operationRevision
+                state.copy(
+                    isApplying = false,
+                    successMessage = if (stillAuthoritative) successMessage else state.successMessage,
+                    errorMessage = if (stillAuthoritative) errorMessage else state.errorMessage
+                )
+            }
+        }
+    }
 
     private fun appliedRes(target: WallpaperTarget): Int = when (target) {
         WallpaperTarget.HOME -> R.string.editor_applied_home

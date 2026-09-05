@@ -39,6 +39,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 class FakeImageRepository : ImageRepository {
     var meta: SourceImageMeta = SourceImageMeta("file:///none", 4000, 3000, "image/jpeg")
@@ -64,11 +65,13 @@ class FakeBehaviorRepository : WallpaperBehaviorRepository {
 }
 
 class FakeFaceDetectionRepository : FaceDetectionRepository {
-    val analyses = mutableMapOf<String, SubjectAnalysis>()
-    val gates = mutableMapOf<String, CompletableDeferred<Unit>>()
+    val analyses = ConcurrentHashMap<String, SubjectAnalysis>()
+    val gates = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+    val started = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     var completedCount = 0
 
     override suspend fun analyzeFaces(uri: String): SubjectAnalysis {
+        started.getOrPut(uri) { CompletableDeferred() }.complete(Unit)
         val gate = gates[uri]
         if (gate != null) withContext(NonCancellable) { gate.await() }
         completedCount++
@@ -76,21 +79,25 @@ class FakeFaceDetectionRepository : FaceDetectionRepository {
     }
 }
 
-/**
- * Controllable renderer. The returned bitmap's width encodes the crop mode
- * (SAFE_FIT=1, BALANCED=2, FILL=3) so tests can assert which request actually
- * published. Optional per-mode blocking sleep simulates non-cooperative work.
- */
-class FakeWallpaperBitmapRenderer(
-    private val sleepMillisByMode: Map<CropMode, Long> = emptyMap()
-) : WallpaperBitmapRenderer {
+/** Controllable renderer whose gates make cancellation and completion deterministic. */
+class FakeWallpaperBitmapRenderer : WallpaperBitmapRenderer {
     var renderCalls = 0
-    var gate: CompletableDeferred<Unit>? = null
+    val started = ConcurrentHashMap<CropMode, CompletableDeferred<Unit>>()
+    val invocationCount = ConcurrentHashMap<CropMode, Int>()
+    val gates = ConcurrentHashMap<CropMode, CompletableDeferred<Unit>>()
+    val nonCancellableModes: MutableSet<CropMode> = ConcurrentHashMap.newKeySet()
 
     override suspend fun render(request: WallpaperRenderRequest, plan: WallpaperRenderPlan): Bitmap {
         renderCalls++
-        gate?.let { if (!it.isCompleted) it.await() }
-        sleepMillisByMode[request.cropMode]?.let { Thread.sleep(it) }
+        started.getOrPut(request.cropMode) { CompletableDeferred() }.complete(Unit)
+        invocationCount[request.cropMode] = (invocationCount[request.cropMode] ?: 0) + 1
+        gates[request.cropMode]?.let { gate ->
+            if (request.cropMode in nonCancellableModes) {
+                withContext(NonCancellable) { gate.await() }
+            } else {
+                gate.await()
+            }
+        }
         return Bitmap.createBitmap(request.cropMode.ordinal + 1, 10, Bitmap.Config.ARGB_8888)
     }
 }
@@ -99,6 +106,8 @@ class FakeExportRepository(
     var result: ExportResult = ExportResult(ExportDestination.MEDIA_STORE, "content://media/1", "wcf.jpg")
 ) : WallpaperExportRepository {
     val exported = mutableListOf<Pair<Bitmap, String>>()
+    var started: CompletableDeferred<Unit>? = null
+    var gate: CompletableDeferred<Unit>? = null
     var failWith: Throwable? = null
 
     override suspend fun exportBitmap(
@@ -107,6 +116,8 @@ class FakeExportRepository(
         format: Bitmap.CompressFormat,
         quality: Int
     ): ExportResult {
+        started?.complete(Unit)
+        gate?.await()
         failWith?.let { throw it }
         exported.add(bitmap to fileName)
         return result
@@ -115,9 +126,13 @@ class FakeExportRepository(
 
 class FakeApplyRepository : WallpaperApplyRepository {
     val applied = mutableListOf<Pair<Bitmap, WallpaperTarget>>()
+    var started: CompletableDeferred<Unit>? = null
+    var gate: CompletableDeferred<Unit>? = null
     var failWith: Throwable? = null
 
     override suspend fun applyWallpaper(bitmap: Bitmap, target: WallpaperTarget): Result<Unit> {
+        started?.complete(Unit)
+        gate?.await()
         applied.add(bitmap to target)
         failWith?.let { return Result.failure(it) }
         return Result.success(Unit)
