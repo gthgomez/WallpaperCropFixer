@@ -39,6 +39,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 class FakeImageRepository : ImageRepository {
     var meta: SourceImageMeta = SourceImageMeta("file:///none", 4000, 3000, "image/jpeg")
@@ -64,9 +65,9 @@ class FakeBehaviorRepository : WallpaperBehaviorRepository {
 }
 
 class FakeFaceDetectionRepository : FaceDetectionRepository {
-    val analyses = mutableMapOf<String, SubjectAnalysis>()
-    val gates = mutableMapOf<String, CompletableDeferred<Unit>>()
-    val started = mutableMapOf<String, CompletableDeferred<Unit>>()
+    val analyses = ConcurrentHashMap<String, SubjectAnalysis>()
+    val gates = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+    val started = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     var completedCount = 0
 
     override suspend fun analyzeFaces(uri: String): SubjectAnalysis {
@@ -81,15 +82,15 @@ class FakeFaceDetectionRepository : FaceDetectionRepository {
 /** Controllable renderer whose gates make cancellation and completion deterministic. */
 class FakeWallpaperBitmapRenderer : WallpaperBitmapRenderer {
     var renderCalls = 0
-    val started = mutableMapOf<CropMode, CompletableDeferred<Unit>>()
-    val invocationCount = mutableMapOf<CropMode, Int>()
-    val gates = mutableMapOf<CropMode, CompletableDeferred<Unit>>()
-    val nonCancellableModes = mutableSetOf<CropMode>()
+    val started = ConcurrentHashMap<CropMode, CompletableDeferred<Unit>>()
+    val invocationCount = ConcurrentHashMap<CropMode, Int>()
+    val gates = ConcurrentHashMap<CropMode, CompletableDeferred<Unit>>()
+    val nonCancellableModes: MutableSet<CropMode> = ConcurrentHashMap.newKeySet()
 
     override suspend fun render(request: WallpaperRenderRequest, plan: WallpaperRenderPlan): Bitmap {
         renderCalls++
-        invocationCount[request.cropMode] = (invocationCount[request.cropMode] ?: 0) + 1
         started.getOrPut(request.cropMode) { CompletableDeferred() }.complete(Unit)
+        invocationCount[request.cropMode] = (invocationCount[request.cropMode] ?: 0) + 1
         gates[request.cropMode]?.let { gate ->
             if (request.cropMode in nonCancellableModes) {
                 withContext(NonCancellable) { gate.await() }

@@ -53,6 +53,16 @@ class EditorViewModelConcurrencyTest {
         }
     }
 
+    /** Blocks until the render for [mode] has entered the fake renderer, then awaits its start marker. */
+    private fun awaitRenderStarted(
+        renderer: FakeWallpaperBitmapRenderer,
+        mode: CropMode,
+        minimumInvocations: Int = 1
+    ) {
+        waitForCondition { (renderer.invocationCount[mode] ?: 0) >= minimumInvocations }
+        runBlocking { renderer.started.getValue(mode).await() }
+    }
+
     @Test
     fun `rapid crop mode changes publish only the last request`() {
         val renderer = FakeWallpaperBitmapRenderer()
@@ -67,11 +77,12 @@ class EditorViewModelConcurrencyTest {
         renderer.nonCancellableModes += setOf(CropMode.SAFE_FIT, CropMode.BALANCED)
 
         vm.setCropMode(CropMode.SAFE_FIT)
-        runBlocking { renderer.started.getValue(CropMode.SAFE_FIT).await() }
+        awaitRenderStarted(renderer, CropMode.SAFE_FIT)
+        val balancedBaseline = renderer.invocationCount[CropMode.BALANCED] ?: 0
         vm.setCropMode(CropMode.BALANCED)
-        runBlocking { renderer.started.getValue(CropMode.BALANCED).await() }
+        awaitRenderStarted(renderer, CropMode.BALANCED, balancedBaseline + 1)
         vm.setCropMode(CropMode.FILL)
-        runBlocking { renderer.started.getValue(CropMode.FILL).await() }
+        awaitRenderStarted(renderer, CropMode.FILL)
         renderer.gates.getValue(CropMode.FILL).complete(Unit)
 
         waitForCondition { vm.uiState.value.previewBitmap?.width == CropMode.FILL.ordinal + 1 && !vm.uiState.value.isBusy }
@@ -176,7 +187,7 @@ class EditorViewModelConcurrencyTest {
 
         vm.setCropMode(CropMode.FILL) // invalidates the published preview synchronously
         vm.applyWallpaper()
-        runBlocking { renderer.started.getValue(CropMode.FILL).await() }
+        awaitRenderStarted(renderer, CropMode.FILL)
         renderer.gates.getValue(CropMode.FILL).complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy }
 
@@ -349,7 +360,7 @@ class EditorViewModelConcurrencyTest {
     }
 
     private class SuspendingRenderer : WallpaperBitmapRenderer {
-        var started = 0
+        @Volatile var started = 0
         val release = CompletableDeferred<Unit>()
         override suspend fun render(
             request: com.wallpapercropfixer.domain.model.WallpaperRenderRequest,

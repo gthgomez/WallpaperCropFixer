@@ -78,14 +78,11 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Reject dynamic dependency versions
-        run: |
-          set -euo pipefail
-          if grep -nE 'SNAPSHOT|latest\.release|\+' gradle/libs.versions.toml app/build.gradle.kts; then
-            echo 'Dynamic or snapshot dependency version found.' >&2
-            exit 1
-          fi
-          echo 'Dependency declaration policy passed: versions are explicit.'
-          echo '::warning::GitHub dependency-review is unavailable for this private repository configuration; OWNER ACTION is required to enable a vulnerability database gate.'
+        shell: pwsh
+        run: ./tools/release-preflight.ps1 -RepoRoot . -DependencyOnly
+
+      - name: Note vulnerability database owner action
+        run: echo '::warning::GitHub dependency-review requires Dependency graph and GitHub Advanced Security to be enabled; OWNER ACTION is required to enable a vulnerability database gate.'
 
   secrets-scan:
     name: Secrets scan

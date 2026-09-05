@@ -5,7 +5,8 @@ param(
     [string]$BundletoolPath,
     [string]$GitleaksPath,
     [string]$PrivacyUrl = "https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html",
-    [string]$ReportPath = ""
+    [string]$ReportPath = "",
+    [switch]$DependencyOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,10 +89,19 @@ if ($buildFile -match 'RELEASE_STORE_FILE' -and $buildFile -match 'RELEASE_STORE
 } else {
     Add-Result "FAIL" "signing contract" "legacy or incomplete signing contract"
 }
-if ($catalog -notmatch '(\+|SNAPSHOT|latest\.release)' -and $buildFile -notmatch 'SNAPSHOT') {
+if ($catalog -notmatch '(?m)^\s*[A-Za-z0-9._-]+\s*=\s*"[^"]*(\+|SNAPSHOT|latest\.release)' -and
+    $buildFile -notmatch '"[^"]*(SNAPSHOT|latest\.release)' -and
+    $buildFile -notmatch '"[0-9][^"]*\+') {
     Add-Result "PASS" "dependency version policy" "no dynamic or snapshot versions found"
 } else {
     Add-Result "FAIL" "dependency version policy" "dynamic or snapshot dependency version found"
+}
+
+# Single source of truth for the CI "Dependency declaration policy" job: it runs
+# this script with -DependencyOnly, so both gates enforce the identical rule.
+if ($DependencyOnly) {
+    if ($hasFailure) { exit 1 }
+    exit 0
 }
 
 $forbiddenFiles = Get-ChildItem -LiteralPath $RepoRoot -Recurse -File -Force |
