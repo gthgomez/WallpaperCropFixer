@@ -1,8 +1,8 @@
 # WallpaperCropFixer Status
 
 **Last verified:** 2026-09-05
-**Status:** 1.0 release candidate (RC1) — bounded polish complete; awaiting physical-device QA + Play Console owner actions
-**Confidence:** high for engineering and release-trust verification. Hosted CI is green on PR #2 (executed 2026-09-05 after the earlier billing block cleared); post-merge main re-verified locally the same day. See `docs/release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md` for the full gate record and `docs/release/OWNER_ACTIONS.md` for the owner handoff.
+**Status:** 1.0 RC1 frozen (tag `v1.0.0-rc1`) — physical-device QA + Play Console owner actions remain
+**Confidence:** high for engineering and release-trust verification (see `docs/release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md` §2–§3 for the executed command matrix and artifact hashes). Hosted CI green on PRs #2 and #5; privacy policy live (HTTP 200); upload signing fails closed. Owner handoff: `docs/release/OWNER_ACTIONS.md`.
 
 ## Purpose
 

@@ -30,9 +30,36 @@ All commands executed locally on the RC commit (Windows, JDK 17, AGP 9.x):
 
 Play Console validation has NOT occurred (owner-only); no claim is made about Play acceptance.
 
-## 3. RC record
+## 3. RC record — WallpaperCropFixer 1.0 RC1
 
-Filled at freeze time (see final dashboard): RC_SHA, AAB_PATH, AAB_SHA256, APK_PATH, APK_SHA256, VERSION_NAME=1.0, VERSION_CODE=1, APPLICATION_ID=com.wallpapercropfixer.
+```text
+BASELINE_MAIN_SHA=97f4ba4 (campaign start)
+RC_TAG=v1.0.0-rc1 (annotated; points at the freeze commit containing this record)
+RC_CODE_STATE=f972983 (PR #5 merge — final code commit; the freeze commit changes docs only)
+VERSION_NAME=1.0
+VERSION_CODE=1
+APPLICATION_ID=com.wallpapercropfixer
+AAB_PATH=app/build/outputs/bundle/releaseVerification/app-releaseVerification.aab (15,304,878 bytes)
+AAB_SHA256=f5e8b6a46a4b85c07bd577874fe88bcd70c217c40838c28979463ccbbe2ff80e
+APK_PATH=app/build/outputs/apk/releaseVerification/app-releaseVerification.apk (24,599,012 bytes)
+APK_SHA256=0a1347b243fc3a09bc739ee597f3f98f25fedc40d705f9e34ec8ca150438dbfe
+BUILD_TIMESTAMP=2026-09-05T20:02Z (artifacts are debug-signed verification builds — NOT upload-ready)
+UNIT_TESTS=57/57 PASS (fresh --rerun-tasks on f972983)
+LINT=PASS (lintDebug + lintReleaseVerification)
+RELEASE_VERIFICATION=PASS (assembleDebug, assembleReleaseVerification, bundleReleaseVerification)
+RELEASE_PREFLIGHT=PASS (exit 0, 2026-09-05T20:03Z)
+PAGE_ALIGNMENT=PASS (zipalign -c -P 16 4; bundletool PAGE_ALIGNMENT_16K; 6/6 native ELFs 16 KB LOAD-aligned)
+PRIVACY_URL=https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html
+PRIVACY_URL_HTTP_STATUS=200 (verified 2026-09-05)
+SIGNING_FAIL_CLOSED=YES (:app:bundleRelease exits 1 with explicit GradleException without RELEASE_* inputs)
+PHYSICAL_QA=NOT_EXECUTED (owner; runbook ready in docs/release/DEVICE_QA_RUNBOOK.md)
+PLAY_ASSETS=PREPARED (docs/store/; screenshots require a device)
+PLAY_DECLARATIONS=DRAFTED (docs/release/DATA_SAFETY_DRAFT.md, PLAY_SUBMISSION_CHECKLIST.md; owner must submit)
+```
+
+The uploaded Play AAB is a DIFFERENT artifact: built by the owner locally with
+`RELEASE_*` credentials (see docs/release/SIGNING_RUNBOOK.md), from the RC tag
+state. The hashes above pin the verification boundary this campaign validated.
 
 ## 4. What changed in this campaign
 
