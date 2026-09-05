@@ -3,6 +3,10 @@
 Every item below is executable and has an explicit evidence owner. An unchecked
 physical or Play item is not an automated PASS.
 
+Physical-device certification uses the condensed runbook in
+`docs/release/DEVICE_QA_RUNBOOK.md`; Play Console steps live in
+`docs/release/PLAY_SUBMISSION_CHECKLIST.md`.
+
 ## AUTOMATED — VERIFIED
 
 - [x] Local: `:app:testDebugUnitTest`; 57 tests passed, including crop math/property tests, viewport transforms, renderer opacity, image decode bounds, export destinations, Compose semantics, and deterministic ViewModel revision races.
@@ -51,7 +55,7 @@ only expected diagnostic data is emitted:
 ## PLAY CONSOLE — OWNER ACTION
 
 - [ ] Replace `OWNER_PROVIDE_PLAY_DEVELOPER_ENTITY` and `OWNER_PROVIDE_PUBLIC_PRIVACY_CONTACT` in `PRIVACY.md`.
-- [ ] Enable GitHub Pages for the private repository if the account/plan supports it, then verify the privacy URL with an unauthenticated HTTP request. Current evidence is a Pages deployment 404.
+- [x] Agent (2026-09-05): GitHub Pages enabled and the "Publish Privacy Policy" workflow deployed; `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` verified with an unauthenticated HTTP 200.
 - [ ] Enter the privacy URL in Play Console and link the same policy from the app.
 - [ ] Complete Data Safety using the advisory worksheet and physical traffic evidence.
 - [ ] Complete content rating and target-audience questionnaires using the packet; do not claim unsupported features.

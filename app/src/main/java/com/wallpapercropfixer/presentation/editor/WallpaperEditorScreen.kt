@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -153,11 +151,11 @@ fun WallpaperEditorScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Custom top bar — no divider, blends into the white page
+            // Custom top bar — no divider, blends into the white page.
+            // Scaffold padding already includes the status-bar inset.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -288,9 +286,7 @@ fun WallpaperEditorScreen(
                     text = stringResource(
                         R.string.editor_device_info,
                         profile.manufacturer,
-                        profile.model,
-                        profile.screenWidthPx,
-                        profile.screenHeightPx
+                        profile.model
                     ),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFFBBBBBB)
@@ -483,12 +479,11 @@ fun WallpaperEditorScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Action buttons
+            // Action buttons — Scaffold padding already includes the nav-bar inset
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .navigationBarsPadding(),
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(

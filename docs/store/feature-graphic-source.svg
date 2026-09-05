@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <!-- WallpaperCropFixer feature graphic source (export at 1024x500 PNG for Play).
+       Visual language: light app surface (#FAFAFA), photo-first imagery, minimal chrome.
+       Left: the problem — a photo cropped badly by the system wallpaper flow.
+       Right: the result — the fitted wallpaper previewed on a phone. -->
+  <defs>
+    <linearGradient id="photo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7BA7D4"/>
+      <stop offset="0.55" stop-color="#B9CEC2"/>
+      <stop offset="1" stop-color="#E8D9A8"/>
+    </linearGradient>
+    <linearGradient id="photoDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5F89B8"/>
+      <stop offset="1" stop-color="#C9B87F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="#FAFAFA"/>
+
+  <!-- LEFT: original photo being cropped away -->
+  <g>
+    <text x="252" y="96" font-family="Roboto, 'Segoe UI', sans-serif" font-size="26" font-weight="600"
+          fill="#333333" text-anchor="middle">Android crops it</text>
+    <!-- full photo -->
+    <rect x="112" y="130" width="280" height="220" rx="10" fill="url(#photoDark)"/>
+    <!-- red crop window showing what the system keeps -->
+    <rect x="196" y="150" width="150" height="150" fill="none" stroke="#D64541" stroke-width="4"/>
+    <!-- dimmed crop-away area -->
+    <rect x="112" y="130" width="280" height="220" rx="10" fill="#000000" opacity="0.28"/>
+    <rect x="196" y="150" width="150" height="150" fill="url(#photo)" opacity="0.96"/>
+    <rect x="196" y="150" width="150" height="150" fill="none" stroke="#D64541" stroke-width="5"/>
+    <text x="252" y="392" font-family="Roboto, 'Segoe UI', sans-serif" font-size="20" fill="#888888"
+          text-anchor="middle">surprises after you set it</text>
+  </g>
+
+  <!-- ARROW -->
+  <g stroke="#333333" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 448 245 L 560 245"/>
+    <path d="M 540 225 L 564 245 L 540 265"/>
+  </g>
+
+  <!-- RIGHT: phone with fitted wallpaper -->
+  <g>
+    <text x="772" y="96" font-family="Roboto, 'Segoe UI', sans-serif" font-size="26" font-weight="600"
+          fill="#333333" text-anchor="middle">You see the fit first</text>
+    <!-- phone silhouette -->
+    <rect x="672" y="118" width="200" height="330" rx="28" fill="#1A1A1A"/>
+    <rect x="682" y="128" width="180" height="310" rx="20" fill="url(#photo)"/>
+    <!-- sun + hills placeholder scenery inside the phone -->
+    <circle cx="820" cy="196" r="26" fill="#FFFFFF" opacity="0.85"/>
+    <path d="M 682 372 Q 742 306 802 366 T 862 350 L 862 438 L 682 438 Z" fill="#6E8F72" opacity="0.9"/>
+    <!-- focus crosshair (app visual language) -->
+    <g stroke="#FFFFFF" stroke-width="3" fill="none">
+      <circle cx="772" cy="300" r="17"/>
+      <circle cx="772" cy="300" r="5" fill="#FFFFFF"/>
+    </g>
+    <text x="772" y="486" font-family="Roboto, 'Segoe UI', sans-serif" font-size="20" fill="#888888"
+          text-anchor="middle" display="none"/>
+  </g>
+
+  <!-- WORDBLOCK -->
+  <g>
+    <text x="52" y="458" font-family="Roboto, 'Segoe UI', sans-serif" font-size="30" font-weight="700" fill="#111111">Wallpaper Crop Fixer</text>
+    <text x="52" y="486" font-family="Roboto, 'Segoe UI', sans-serif" font-size="18" fill="#666666">Preview the fit. Home, lock, or both. On-device.</text>
+  </g>
+</svg>
