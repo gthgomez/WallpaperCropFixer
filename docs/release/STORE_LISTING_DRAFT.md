@@ -20,7 +20,7 @@ Wallpaper Crop Fixer shows you a true-proportion preview of exactly how your pho
 • Tap to position: move the crop focus where you want it. Manual positioning comes first, with automatic face-detected framing and center as defaults.
 • Home, Lock, or Both: choose which screen to set, and preview each surface before you apply.
 • Three crop modes: Safe Fit letterboxes when more than 20% of your photo would be cropped; Balanced allows a tighter crop up to 40%; Fill never letterboxes.
-• Letterbox backgrounds: a blurred version of your photo (default), a gradient, or a solid color.
+• Letterbox backgrounds: when a mode adds padding, the padding is filled with a blurred version of your photo.
 • Export: save the fitted image to Pictures/WallpaperCropFixer for reuse.
 
 Privacy by design: your photos never leave your device. Everything runs on your phone — face detection is bundled in the app and executes on-device. No ads. No analytics. No tracking. No accounts. The app requests a single permission: setting your wallpaper.
@@ -43,7 +43,7 @@ Guardrails honored: no superlatives ("perfectly", "best"), no unverifiable claim
 | 1 | Main preview: photo on phone-shaped frame | **See it before you set it** | The frame shows the real crop your wallpaper will get | No more surprises after Apply |
 | 2 | Preview with a tap reticle moved off-center, face in frame | **Keep what matters in frame** | Tap anywhere to move the focus; face-aware framing starts you off | Your subject survives the crop |
 | 3 | Target selector with Home / Lock / Both + per-surface toggle | **Home, Lock, or Both** | Preview each surface, then set one or both | One app for both screens |
-| 4 | Crop-mode segmented control (Safe Fit / Balanced / Fill), letterbox visible | **Fit it your way** | Letterbox when you want it, fill when you don't — blurred, gradient, or solid backgrounds | Control over how much of the photo shows |
+| 4 | Crop-mode segmented control (Safe Fit / Balanced / Fill), letterbox visible | **Fit it your way** | Letterbox when you want it, fill when you don't — padding filled with a blurred version of your photo | Control over how much of the photo shows |
 | 5 | Success state after Apply | **Private by design** | Photos stay on your device. No ads. No tracking. One permission. | Trust built into the flow |
 
 Rules: device-frame screenshots captured on Galaxy S25 Ultra (primary certification device); no UI elements from unreleased features; text on images ≥ readable at thumbnail size.
@@ -55,5 +55,5 @@ Rules: device-frame screenshots captured on Galaxy S25 Ultra (primary certificat
 
 ## 6. Contact fields
 - Email: OWNER_MUST_CONFIRM (personal gmail placeholder in repo docs must be replaced).
-- Website: `https://github.com/gthgomez/WallpaperCropFixer` (public repo) or the Pages site once live.
-- Privacy policy URL: `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` (must be live before submission).
+- Website: `https://github.com/gthgomez/WallpaperCropFixer` (public repo) or the Pages site (live).
+- Privacy policy URL: `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` (live, verified 2026-09-05).
