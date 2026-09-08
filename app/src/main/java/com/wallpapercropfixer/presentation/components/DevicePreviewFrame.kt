@@ -26,12 +26,17 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wallpapercropfixer.R
 import com.wallpapercropfixer.core.math.ViewportTransform
 import com.wallpapercropfixer.domain.model.FocusPoint
+
+/** Fraction of the canvas the focus moves per accessibility action. */
+private const val focusStep = 0.05f
 
 /**
  * Phone-shaped preview frame with a soft drop shadow (no hard border).
@@ -56,6 +61,32 @@ fun DevicePreviewFrame(
     val frameA11y = stringResource(R.string.preview_frame_a11y)
     val previewA11y = stringResource(R.string.preview_image)
     val emptyText = stringResource(R.string.preview_empty)
+    val moveLeftLabel = stringResource(R.string.a11y_focus_move_left)
+    val moveRightLabel = stringResource(R.string.a11y_focus_move_right)
+    val moveUpLabel = stringResource(R.string.a11y_focus_move_up)
+    val moveDownLabel = stringResource(R.string.a11y_focus_move_down)
+
+    // TalkBack-reachable alternative to tap-to-reposition: directional focus
+    // moves expressed in the same canvas-normalized space as [focusPoint].
+    fun moveFocus(dx: Float, dy: Float): Boolean {
+        val current = focusPoint ?: return false
+        val onFocus = onFocusTap ?: return false
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        onFocus(
+            FocusPoint(
+                xNormalized = (current.xNormalized + dx).coerceIn(0f, 1f),
+                yNormalized = (current.yNormalized + dy).coerceIn(0f, 1f)
+            )
+        )
+        return true
+    }
+
+    val focusActions = if (onFocusTap != null) listOf(
+        CustomAccessibilityAction(moveLeftLabel) { moveFocus(-focusStep, 0f) },
+        CustomAccessibilityAction(moveRightLabel) { moveFocus(focusStep, 0f) },
+        CustomAccessibilityAction(moveUpLabel) { moveFocus(0f, -focusStep) },
+        CustomAccessibilityAction(moveDownLabel) { moveFocus(0f, focusStep) }
+    ) else emptyList()
 
     Box(
         modifier = modifier
@@ -72,7 +103,10 @@ fun DevicePreviewFrame(
             .background(Color(0xFF1A1A1A))
             .then(
                 if (onFocusTap != null)
-                    Modifier.semantics { contentDescription = frameA11y }
+                    Modifier.semantics {
+                        contentDescription = frameA11y
+                        customActions = focusActions
+                    }
                 else Modifier
             ),
         contentAlignment = Alignment.Center

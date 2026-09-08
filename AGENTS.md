@@ -6,6 +6,5 @@
 - Hallucinated ML Kit Face Detection API — bounding box coordinates and face landmarks
 - Incorrect EXIF orientation mapping applied to crop math — orientation must be read before cropping
 - Confusion about Hilt DI — Hilt IS authorized here (exception to workspace no-DI convention)
-- Hallucinated Coil image loading transformation chains
 
 **Verification gate:** `./gradlew assembleDebug`

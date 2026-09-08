@@ -155,9 +155,9 @@ fun AppEntryScreen(
 
         Text(
             text = stringResource(R.string.entry_title),
+            // No fixed line height: it clipped glyphs at large font scales.
             style = MaterialTheme.typography.displaySmall.copy(
-                fontWeight = FontWeight.Bold,
-                lineHeight = 44.sp
+                fontWeight = FontWeight.Bold
             ),
             textAlign = TextAlign.Center,
             color = Color(0xFF111111),
