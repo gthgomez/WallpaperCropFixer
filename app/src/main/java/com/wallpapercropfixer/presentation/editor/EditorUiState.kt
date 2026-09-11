@@ -48,8 +48,17 @@ data class EditorUiState(
     val manualFocusPoint: FocusPoint? = null,
     val subjectAnalysis: SubjectAnalysis? = null,
     val faceDetectionStatus: FaceDetectionStatus = FaceDetectionStatus.NOT_RUN,
+    /** The current, render-matching publication. The only source of Apply/Save eligibility. */
     val publishedPreview: PublishedPreview? = null,
-    // Which of the two bitmaps the user is currently viewing in the frame
+    /**
+     * Display-only snapshot kept on screen while a newer render is pending or has failed.
+     * It is never eligible for apply/export; a failed update must not make an old render
+     * applicable again.
+     */
+    val retainedPreview: PublishedPreview? = null,
+    /** True when the latest render attempt failed and [retainedPreview] is what is shown. */
+    val renderFailed: Boolean = false,
+    // Which of the two renders the user is currently viewing (BOTH target only)
     val previewingLock: Boolean = false,
     val isRendering: Boolean = false,
     val isApplying: Boolean = false,
@@ -57,25 +66,41 @@ data class EditorUiState(
     val errorMessage: UiMessage? = null,
     val successMessage: UiMessage? = null
 ) {
-    /** Primary preview (HOME, or LOCK when target == LOCK). */
+    /** True only when what is displayed exactly matches the selected options and focus. */
+    val isPreviewCurrent: Boolean
+        get() = publishedPreview != null
+
+    /** Eligible primary preview (HOME, or the LOCK-only render stored in the primary slot). */
     val previewBitmap: Bitmap?
         get() = publishedPreview?.home?.bitmap
 
-    /** Secondary preview only populated when target == BOTH. */
+    /** Eligible secondary preview only populated when target == BOTH. */
     val lockPreviewBitmap: Bitmap?
         get() = publishedPreview?.lock?.bitmap
-
-    /** The plan that belongs to the currently published bitmap. */
-    val renderPlan: WallpaperRenderPlan?
-        get() = publishedPreview?.home?.plan
 
     /** True while any operation can invalidate or consume the current preview. */
     val isBusy: Boolean
         get() = isLoading || isRendering || isApplying || isExporting
 
+    /**
+     * The complete snapshot (request + plan + bitmap) currently displayed: the published
+     * render when current, otherwise the retained one. The tuple always travels together
+     * so overlays and taps can never pair one render's bitmap with another render's
+     * geometry. In BOTH mode the viewing tab selects which render is shown.
+     */
+    val displayedPreview: RenderedPreview?
+        get() {
+            val publication = publishedPreview ?: retainedPreview ?: return null
+            return displayedRender(publication)
+        }
+
+    /** The most recent publication regardless of freshness (drives viewing-tab availability). */
+    val latestPublication: PublishedPreview?
+        get() = publishedPreview ?: retainedPreview
+
     /** The bitmap currently shown in the device frame. */
     val activeBitmap: Bitmap?
-        get() = if (previewingLock && lockPreviewBitmap != null) lockPreviewBitmap else previewBitmap
+        get() = displayedPreview?.bitmap
 
     /** Width/height ratio of the actual device screen for the preview frame. */
     val deviceAspectRatio: Float
@@ -94,5 +119,12 @@ data class EditorUiState(
             val targetW = profile.screenWidthPx
             val targetH = profile.screenHeightPx
             return meta.width < targetW * 0.8f || meta.height < targetH * 0.8f
+        }
+
+    private fun displayedRender(publication: PublishedPreview): RenderedPreview =
+        if (publication.target == WallpaperTarget.BOTH && previewingLock) {
+            publication.lock ?: publication.home
+        } else {
+            publication.home
         }
 }

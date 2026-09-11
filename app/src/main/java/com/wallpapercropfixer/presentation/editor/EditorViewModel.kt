@@ -52,6 +52,12 @@ import javax.inject.Inject
  * it captured; later option changes invalidate publication without changing the
  * operation's inputs. Bitmaps are intentionally never manually recycled because
  * Compose and committed operations may still reference them.
+ *
+ * Display vs eligibility: [EditorUiState.retainedPreview] keeps the last committed
+ * render visible while a newer one renders or after a failure, but only
+ * [EditorUiState.publishedPreview] restores Apply/Save eligibility. The displayed
+ * [RenderedPreview] tuple (request, plan, bitmap) is selected as one unit so the
+ * overlay and tap mapping always use the geometry of the bitmap actually shown.
  */
 @HiltViewModel
 class EditorViewModel @Inject constructor(
@@ -135,7 +141,6 @@ class EditorViewModel @Inject constructor(
         ++previewGeneration
         ++applyOperationToken
         ++exportOperationToken
-        savedStateHandle[KEY_IMAGE_URI] = uri
         previewJob?.cancel()
         loadJob?.cancel()
 
@@ -152,6 +157,8 @@ class EditorViewModel @Inject constructor(
                     subjectAnalysis = null,
                     faceDetectionStatus = FaceDetectionStatus.NOT_RUN,
                     publishedPreview = null,
+                    retainedPreview = null,
+                    renderFailed = false,
                     manualFocusPoint = null,
                     previewingLock = false,
                     isRendering = false,
@@ -219,7 +226,13 @@ class EditorViewModel @Inject constructor(
     fun setWallpaperTarget(target: WallpaperTarget) {
         invalidatePublishedPreview()
         savedStateHandle[KEY_TARGET] = target.name
-        _uiState.update { it.copy(wallpaperTarget = target, previewingLock = false) }
+        _uiState.update {
+            it.copy(
+                wallpaperTarget = target,
+                // The lock view only exists when both screens are rendered.
+                previewingLock = it.previewingLock && target == WallpaperTarget.BOTH
+            )
+        }
         generatePreview()
     }
 
@@ -274,9 +287,9 @@ class EditorViewModel @Inject constructor(
         generatePreview()
     }
 
-    /** Flip the preview frame between HOME and LOCK when target == BOTH. */
-    fun togglePreviewTarget() {
-        _uiState.update { it.copy(previewingLock = !it.previewingLock) }
+    /** Select which of the two renders (BOTH target) is displayed. Never triggers a render. */
+    fun setViewingLock(viewingLock: Boolean) {
+        _uiState.update { it.copy(previewingLock = viewingLock) }
     }
 
     fun resetToDefaults() {
@@ -293,12 +306,17 @@ class EditorViewModel @Inject constructor(
                     wallpaperTarget = settings.defaultWallpaperTarget,
                     backgroundFillMode = settings.defaultBackgroundFillMode,
                     faceAwareEnabled = settings.defaultFaceAwareEnabled,
-                    manualFocusPoint = null,
-                    previewingLock = false
+                    manualFocusPoint = null
                 )
             }
             generatePreview()
         }
+    }
+
+    /** Re-runs the render for the current selection after a failure. */
+    fun retryRender() {
+        if (_uiState.value.sourceImageMeta == null || _uiState.value.isBusy) return
+        generatePreview()
     }
 
     /**
@@ -333,7 +351,10 @@ class EditorViewModel @Inject constructor(
             it.copy(
                 isRendering = true,
                 publishedPreview = null,
-                previewingLock = false,
+                // Keep the last committed render visible; it stays display-only
+                // because publishedPreview is null until this render publishes.
+                retainedPreview = it.publishedPreview ?: it.retainedPreview,
+                renderFailed = false,
                 errorMessage = null,
                 successMessage = null
             )
@@ -366,23 +387,25 @@ class EditorViewModel @Inject constructor(
                     null
                 }
 
+                val published = PublishedPreview(
+                    revision = revision,
+                    target = state.wallpaperTarget,
+                    home = RenderedPreview(homeRequest, homePlan, homeBitmap),
+                    lock = if (lockRequest != null && lockPlan != null && lockBitmap != null) {
+                        RenderedPreview(lockRequest, lockPlan, lockBitmap)
+                    } else {
+                        null
+                    }
+                )
                 _uiState.update {
                     if (generation != previewGeneration) {
                         it
                     } else {
                         it.copy(
                             isRendering = false,
-                            publishedPreview = PublishedPreview(
-                                revision = revision,
-                                target = state.wallpaperTarget,
-                                home = RenderedPreview(homeRequest, homePlan, homeBitmap),
-                                lock = if (lockRequest != null && lockPlan != null && lockBitmap != null) {
-                                    RenderedPreview(lockRequest, lockPlan, lockBitmap)
-                                } else {
-                                    null
-                                }
-                            ),
-                            previewingLock = false
+                            publishedPreview = published,
+                            retainedPreview = published,
+                            renderFailed = false
                         )
                     }
                 }
@@ -390,9 +413,8 @@ class EditorViewModel @Inject constructor(
                 throw e
             } catch (t: Throwable) {
                 if (isCurrentPreviewGeneration(generation)) {
-                    _uiState.update {
-                        it.copy(isRendering = false, errorMessage = UiMessage(R.string.error_preview))
-                    }
+                    // The retained display stays on screen; eligibility is NOT restored.
+                    _uiState.update { it.copy(isRendering = false, renderFailed = true) }
                 }
                 Logger.e("generatePreview failed", t)
             }
@@ -519,9 +541,9 @@ class EditorViewModel @Inject constructor(
     private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration
 
     /**
-     * Closes the publication window before a mutable editor option changes. This
-     * ordering prevents an operation completion from certifying revision A after
-     * the UI has already started describing configuration B.
+     * Closes the publication window before a mutable editor option changes. The last
+     * committed render stays visible (retained) but loses Apply/Save eligibility, and
+     * the Home/Lock viewing tab is preserved for same-image option changes.
      */
     private fun invalidatePublishedPreview() {
         ++previewGeneration
@@ -534,7 +556,7 @@ class EditorViewModel @Inject constructor(
                     state.behaviorProfile != null,
                 errorMessage = null,
                 successMessage = null,
-                previewingLock = false
+                renderFailed = false
             )
         }
     }
@@ -613,7 +635,6 @@ class EditorViewModel @Inject constructor(
     }
 
     companion object {
-        private const val KEY_IMAGE_URI = "editor_image_uri"
         private const val KEY_CROP_MODE = "editor_crop_mode"
         private const val KEY_TARGET = "editor_target"
         private const val KEY_FILL_MODE = "editor_fill_mode"

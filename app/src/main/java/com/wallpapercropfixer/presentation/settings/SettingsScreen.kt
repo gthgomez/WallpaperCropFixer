@@ -36,18 +36,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wallpapercropfixer.R
+import com.wallpapercropfixer.domain.model.UserSettings
+import com.wallpapercropfixer.presentation.components.FillModeRow
 import com.wallpapercropfixer.presentation.components.ModeChipRow
 import com.wallpapercropfixer.presentation.components.WallpaperTargetTabs
+import com.wallpapercropfixer.presentation.theme.WallpaperCropFixerTheme
 
 /**
  * Canonical public privacy policy URL (GitHub Pages). The repo-side publishing
@@ -62,16 +65,29 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    SettingsContent(
+        settings = settings,
+        onUpdate = viewModel::update,
+        onBack = onBack
+    )
+}
+
+/** Stateless settings UI (previewable). */
+@Composable
+internal fun SettingsContent(
+    settings: UserSettings,
+    onUpdate: (UserSettings) -> Unit,
+    onBack: () -> Unit
+) {
     val uriHandler = LocalUriHandler.current
 
-    Scaffold(containerColor = Color(0xFFFAFAFA)) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Custom top bar — Scaffold padding already includes the status-bar inset
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -82,13 +98,13 @@ fun SettingsScreen(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back),
-                        tint = Color(0xFF333333)
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
                     stringResource(R.string.settings),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF111111)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -102,14 +118,14 @@ fun SettingsScreen(
                 SettingsCard(title = stringResource(R.string.settings_default_crop_mode)) {
                     ModeChipRow(
                         selected = settings.defaultCropMode,
-                        onSelect = { viewModel.update(settings.copy(defaultCropMode = it)) }
+                        onSelect = { onUpdate(settings.copy(defaultCropMode = it)) }
                     )
                 }
 
                 SettingsCard(title = stringResource(R.string.settings_default_target)) {
                     WallpaperTargetTabs(
                         selected = settings.defaultWallpaperTarget,
-                        onSelect = { viewModel.update(settings.copy(defaultWallpaperTarget = it)) },
+                        onSelect = { onUpdate(settings.copy(defaultWallpaperTarget = it)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -123,7 +139,7 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.settings_face_aware_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF888888)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val settingsFaceOn = stringResource(R.string.editor_face_on)
                         val settingsFaceOff = stringResource(R.string.editor_face_off)
@@ -133,7 +149,7 @@ fun SettingsScreen(
                         )
                         Switch(
                             checked = settings.defaultFaceAwareEnabled,
-                            onCheckedChange = { viewModel.update(settings.copy(defaultFaceAwareEnabled = it)) },
+                            onCheckedChange = { onUpdate(settings.copy(defaultFaceAwareEnabled = it)) },
                             colors = SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
                             ),
@@ -144,11 +160,25 @@ fun SettingsScreen(
                     }
                 }
 
+                SettingsCard(title = stringResource(R.string.settings_default_fill)) {
+                    Text(
+                        stringResource(R.string.settings_default_fill_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    FillModeRow(
+                        selected = settings.defaultBackgroundFillMode,
+                        onSelect = { onUpdate(settings.copy(defaultBackgroundFillMode = it)) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 // Export quality card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -173,7 +203,7 @@ fun SettingsScreen(
                             Text(
                                 stringResource(R.string.settings_export_quality),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color(0xFF111111),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
                             Box(
@@ -187,7 +217,7 @@ fun SettingsScreen(
                                 Text(
                                     stringResource(R.string.settings_export_quality_value, localQuality.toInt()),
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -198,7 +228,7 @@ fun SettingsScreen(
                             value = localQuality,
                             onValueChange = { localQuality = it },
                             onValueChangeFinished = {
-                                viewModel.update(settings.copy(exportJpegQuality = localQuality.toInt()))
+                                onUpdate(settings.copy(exportJpegQuality = localQuality.toInt()))
                             },
                             valueRange = 60f..100f,
                             steps = 39,
@@ -209,16 +239,24 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .semantics {
-                                     contentDescription = qualityDescription
-                                 }
+                                    contentDescription = qualityDescription
+                                }
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.settings_export_quality_min), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
-                            Text(stringResource(R.string.settings_export_quality_max), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
+                            Text(
+                                stringResource(R.string.settings_export_quality_min),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                stringResource(R.string.settings_export_quality_max),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -236,19 +274,27 @@ fun SettingsScreen(
     }
 }
 
+@Preview(showBackground = true, widthDp = 400, heightDp = 880)
+@Composable
+private fun SettingsContentPreview() {
+    WallpaperCropFixerTheme {
+        SettingsContent(settings = UserSettings(), onUpdate = {}, onBack = {})
+    }
+}
+
 @Composable
 private fun SettingsCard(title: String, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 title,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = Color(0xFF111111)
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(12.dp))
             content()
