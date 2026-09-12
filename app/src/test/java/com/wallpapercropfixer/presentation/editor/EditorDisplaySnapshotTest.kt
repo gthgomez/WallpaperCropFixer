@@ -12,6 +12,7 @@ import com.wallpapercropfixer.domain.model.WallpaperRenderPlan
 import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
 import com.wallpapercropfixer.rendering.WallpaperBitmapRenderer
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -169,11 +170,15 @@ class EditorDisplaySnapshotTest {
 
     @Test
     fun `option change retains the display but withdraws eligibility synchronously`() {
-        val vm = buildEditorViewModel()
+        // Gate the FILL render so a fast publication cannot land between
+        // setCropMode() and the synchronous eligibility assertions below.
+        val renderer = FakeWallpaperBitmapRenderer()
+        val vm = buildEditorViewModel(renderer = renderer)
         vm.loadImage("file:///photo")
         waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
         val shown = vm.uiState.value.activeBitmap
 
+        renderer.gates[CropMode.FILL] = CompletableDeferred()
         vm.setCropMode(CropMode.FILL)
 
         val state = vm.uiState.value
@@ -182,6 +187,10 @@ class EditorDisplaySnapshotTest {
         assertFalse("eligibility must be withdrawn immediately", state.isPreviewCurrent)
         assertNull(state.previewBitmap)
         assertTrue(state.isRendering)
+
+        // Release the gated render: a normal publication restores eligibility.
+        renderer.gates[CropMode.FILL]?.complete(Unit)
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
     }
 
     @Test
