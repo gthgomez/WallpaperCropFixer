@@ -1,5 +1,6 @@
 package com.wallpapercropfixer.presentation.components
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -8,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.wallpapercropfixer.R
 import com.wallpapercropfixer.domain.model.WallpaperTarget
 
@@ -26,7 +28,8 @@ fun WallpaperTargetTabs(
                 selected = target == selected,
                 onClick = { onSelect(target) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = targets.size),
-                label = { Text(stringResource(target.labelRes())) }
+                label = { Text(stringResource(target.labelRes())) },
+                modifier = Modifier.heightIn(min = 48.dp)
             )
         }
     }
