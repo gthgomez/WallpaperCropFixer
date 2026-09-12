@@ -265,7 +265,12 @@ class EditorDisplaySnapshotTest {
         waitForCondition { vm.uiState.value.lockPreviewBitmap != null && !vm.uiState.value.isBusy }
         vm.setViewingLock(true)
         vm.loadImage("file:///photo2")
-        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        // loadImage() resets state inside a coroutine; require the new URI so
+        // this wait cannot be satisfied by the pre-load (photo1) preview.
+        waitForCondition {
+            vm.uiState.value.imageUri == "file:///photo2" &&
+                vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy
+        }
         assertFalse("a new photo starts on the HOME view", vm.uiState.value.previewingLock)
     }
 
@@ -316,7 +321,11 @@ class EditorDisplaySnapshotTest {
         assertNotNull(bitmapA)
 
         vm.loadImage("file:///photoB")
-        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        // Require the new URI so this wait cannot be satisfied by the photoA state.
+        waitForCondition {
+            vm.uiState.value.imageUri == "file:///photoB" &&
+                vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy
+        }
 
         assertEquals(
             "a new image starts clean: retained == published, no stale display",
