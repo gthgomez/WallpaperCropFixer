@@ -94,12 +94,19 @@ class AndroidImageRepository @Inject constructor(
         }
     }
 
-    private fun computeSampleSize(srcW: Int, srcH: Int, maxW: Int, maxH: Int): Int {
+    // Exposed for tests.
+    internal fun computeSampleSize(srcW: Int, srcH: Int, maxW: Int, maxH: Int): Int {
         var sampleSize = 1
         if (srcH > maxH || srcW > maxW) {
             val halfH = srcH / 2
             val halfW = srcW / 2
             while ((halfH / sampleSize) >= maxH || (halfW / sampleSize) >= maxW) {
+                sampleSize *= 2
+            }
+            // The halving loop compares against srcW/2, so it can stop one step early
+            // and decode up to just under 2x the budget per side. Decoded dimensions
+            // are srcW/sampleSize; keep doubling until they fit the budget.
+            while (srcW / sampleSize > maxW || srcH / sampleSize > maxH) {
                 sampleSize *= 2
             }
         }

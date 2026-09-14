@@ -254,7 +254,12 @@ class EditorViewModelConcurrencyTest {
         assertNull("stale apply must not surface an error", vm.uiState.value.errorMessage)
         assertEquals(1, applyRepo.applied.size)
         assertEquals(appliedBitmap, applyRepo.applied.single().first)
-        assertNull("revision A is no longer publishable", vm.uiState.value.previewBitmap)
+        // Keep-last-good: revision A stays on screen until revision B lands, but the
+        // stale apply completion must not certify it.
+        assertEquals("revision A stays visible while render B is in flight",
+            appliedBitmap, vm.uiState.value.previewBitmap)
+        assertEquals("retained preview must still be revision A",
+            appliedRevision, vm.uiState.value.publishedPreview!!.revision)
 
         renderB.complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap?.width == CropMode.FILL.ordinal + 1 }
@@ -288,7 +293,12 @@ class EditorViewModelConcurrencyTest {
         assertTrue("render B must remain busy after export A completes", vm.uiState.value.isRendering)
         assertNull("stale export must not certify revision A", vm.uiState.value.successMessage)
         assertEquals(exportedBitmap, exportRepo.exported.single().first)
-        assertNull("revision A is no longer publishable", vm.uiState.value.previewBitmap)
+        // Keep-last-good: revision A stays on screen until revision B lands, but the
+        // stale export completion must not certify it.
+        assertEquals("revision A stays visible while render B is in flight",
+            exportedBitmap, vm.uiState.value.previewBitmap)
+        assertEquals("retained preview must still be revision A",
+            exportedRevision, vm.uiState.value.publishedPreview!!.revision)
 
         renderB.complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap != null }
@@ -357,6 +367,118 @@ class EditorViewModelConcurrencyTest {
         applyRepo.gate!!.complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy }
         assertEquals(1, applyRepo.applied.size)
+    }
+
+    @Test
+    fun `re-render keeps the last preview visible and replaces it on completion`() {
+        val renderer = FakeWallpaperBitmapRenderer()
+        val vm = buildEditorViewModel(renderer = renderer)
+        vm.loadImage("file:///photo")
+        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
+        val first = vm.uiState.value.previewBitmap
+        val firstRevision = vm.uiState.value.publishedPreview!!.revision
+
+        renderer.gates[CropMode.FILL] = CompletableDeferred()
+        vm.setCropMode(CropMode.FILL)
+        awaitRenderStarted(renderer, CropMode.FILL)
+
+        assertTrue("re-render must be in flight", vm.uiState.value.isRendering)
+        assertEquals("last good preview must stay visible while re-rendering",
+            first, vm.uiState.value.previewBitmap)
+        assertEquals("retained preview must still be the old revision",
+            firstRevision, vm.uiState.value.publishedPreview!!.revision)
+
+        renderer.gates.getValue(CropMode.FILL).complete(Unit)
+        waitForCondition {
+            !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap?.width == CropMode.FILL.ordinal + 1
+        }
+        assertTrue(vm.uiState.value.publishedPreview!!.revision > firstRevision)
+        assertTrue("the new revision must replace the retained bitmap",
+            vm.uiState.value.previewBitmap !== first)
+    }
+
+    @Test
+    fun `retryPreview recovers after a failed render`() {
+        val renderer = FlakyRenderer(failuresRemaining = 1)
+        val vm = buildEditorViewModel(renderer = renderer)
+        vm.loadImage("file:///photo")
+        waitForCondition { !vm.uiState.value.isBusy }
+
+        assertEquals(R.string.error_preview, vm.uiState.value.errorMessage?.resId)
+        assertNull(vm.uiState.value.previewBitmap)
+
+        vm.retryPreview()
+        waitForCondition { !vm.uiState.value.isBusy }
+
+        assertNull("retry must clear the preview error", vm.uiState.value.errorMessage)
+        assertNotNull("retry must publish a preview", vm.uiState.value.previewBitmap)
+    }
+
+    @Test
+    fun `retryPreview does not stack a second render while busy`() {
+        val renderer = FakeWallpaperBitmapRenderer()
+        val vm = buildEditorViewModel(renderer = renderer)
+        vm.loadImage("file:///photo")
+        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
+
+        renderer.gates[CropMode.BALANCED] = CompletableDeferred()
+        vm.setCropMode(CropMode.BALANCED)
+        awaitRenderStarted(renderer, CropMode.BALANCED, 2)
+        val callsBeforeRetry = renderer.renderCalls
+
+        vm.retryPreview()
+
+        assertEquals("retry must be ignored while a render is in flight",
+            callsBeforeRetry, renderer.renderCalls)
+
+        renderer.gates.getValue(CropMode.BALANCED).complete(Unit)
+        waitForCondition { !vm.uiState.value.isBusy }
+    }
+
+    @Test
+    fun `retryPreview does nothing before an image is loaded`() {
+        val renderer = FakeWallpaperBitmapRenderer()
+        val vm = buildEditorViewModel(renderer = renderer)
+
+        vm.retryPreview()
+
+        assertEquals(0, renderer.renderCalls)
+        assertFalse(vm.uiState.value.isBusy)
+        assertNull(vm.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `lock-target export names the file with the wcf_lock prefix`() {
+        val exportRepo = FakeExportRepository()
+        val vm = buildEditorViewModel(exportRepository = exportRepo)
+        vm.loadImage("file:///photo")
+        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
+
+        vm.setWallpaperTarget(WallpaperTarget.LOCK)
+        waitForCondition { !vm.uiState.value.isBusy }
+        vm.exportWallpaper()
+        waitForCondition { !vm.uiState.value.isBusy }
+
+        assertEquals(1, exportRepo.exported.size)
+        assertTrue("lock export must use the wcf_lock_ prefix: ${exportRepo.exported[0].second}",
+            exportRepo.exported[0].second.startsWith("wcf_lock_"))
+    }
+
+    @Test
+    fun `both-target export writes one wcf_home_ and one wcf_lock_ file`() {
+        val exportRepo = FakeExportRepository()
+        val vm = buildEditorViewModel(exportRepository = exportRepo)
+        vm.loadImage("file:///photo")
+        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
+
+        vm.setWallpaperTarget(WallpaperTarget.BOTH)
+        waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.lockPreviewBitmap != null }
+        vm.exportWallpaper()
+        waitForCondition { !vm.uiState.value.isBusy }
+
+        assertEquals(2, exportRepo.exported.size)
+        assertTrue(exportRepo.exported[0].second.startsWith("wcf_home_"))
+        assertTrue(exportRepo.exported[1].second.startsWith("wcf_lock_"))
     }
 
     private class SuspendingRenderer : WallpaperBitmapRenderer {

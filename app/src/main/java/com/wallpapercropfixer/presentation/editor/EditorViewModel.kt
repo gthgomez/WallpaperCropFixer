@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 /**
@@ -50,7 +52,9 @@ import javax.inject.Inject
  * the selected options, and any applied/exported bitmap always correspond to the
  * same render generation. A committed operation owns the immutable PublishedPreview
  * it captured; later option changes invalidate publication without changing the
- * operation's inputs. Bitmaps are intentionally never manually recycled because
+ * operation's inputs. While a re-render is in flight the last published preview
+ * stays visible (keep-last-good) and the new revision replaces it atomically.
+ * Bitmaps are intentionally never manually recycled because
  * Compose and committed operations may still reference them.
  */
 @HiltViewModel
@@ -70,8 +74,9 @@ class EditorViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
-    @Volatile
-    private var previewGeneration = 0
+    // Generation tokens are bumped from both the main thread (option changes) and
+    // IO-dispatched load/configuration paths, so they must be atomics.
+    private val previewGeneration = AtomicInteger(0)
 
     @Volatile
     private var loadGeneration = 0
@@ -79,8 +84,7 @@ class EditorViewModel @Inject constructor(
     private var previewJob: Job? = null
     private var loadJob: Job? = null
 
-    @Volatile
-    private var publishedRevision = 0L
+    private val publishedRevision = AtomicLong(0L)
 
     @Volatile
     private var applyOperationToken = 0L
@@ -132,10 +136,9 @@ class EditorViewModel @Inject constructor(
         }
 
         val gen = ++loadGeneration
-        ++previewGeneration
+        previewGeneration.incrementAndGet()
         ++applyOperationToken
         ++exportOperationToken
-        savedStateHandle[KEY_IMAGE_URI] = uri
         previewJob?.cancel()
         loadJob?.cancel()
 
@@ -170,6 +173,9 @@ class EditorViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        // Stay busy (face analysis + first render) until the first
+                        // preview publishes, so the UI never shows a dead empty frame.
+                        isRendering = true,
                         sourceImageMeta = meta,
                         deviceProfile = deviceProfile,
                         behaviorProfile = behaviorProfile
@@ -223,6 +229,11 @@ class EditorViewModel @Inject constructor(
         generatePreview()
     }
 
+    /**
+     * Fully implemented but intentionally NOT exposed in the v1.0 UI: gradient/solid
+     * letterbox backgrounds are withheld from the store listing (see commit 9b600de).
+     * Retained so the pipeline stays complete; the default is [BackgroundFillMode.BLUR].
+     */
     fun setBackgroundFillMode(mode: BackgroundFillMode) {
         invalidatePublishedPreview()
         savedStateHandle[KEY_FILL_MODE] = mode.name
@@ -324,15 +335,16 @@ class EditorViewModel @Inject constructor(
         val device = state.deviceProfile ?: return
         val behavior = state.behaviorProfile ?: return
 
-        val generation = ++previewGeneration
+        val generation = previewGeneration.incrementAndGet()
         previewJob?.cancel()
 
         // Disable apply/save immediately and atomically with the option change.
-        val revision = ++publishedRevision
+        val revision = publishedRevision.incrementAndGet()
         _uiState.update {
             it.copy(
                 isRendering = true,
-                publishedPreview = null,
+                // Keep the last published preview visible while re-rendering; the
+                // new revision replaces it atomically on completion.
                 previewingLock = false,
                 errorMessage = null,
                 successMessage = null
@@ -367,7 +379,7 @@ class EditorViewModel @Inject constructor(
                 }
 
                 _uiState.update {
-                    if (generation != previewGeneration) {
+                    if (generation != previewGeneration.get()) {
                         it
                     } else {
                         it.copy(
@@ -399,13 +411,24 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Re-runs preview generation for the current selection so a failed render can
+     * be retried. No-op while any operation is in flight or no image is loaded;
+     * the UI picks this (or [loadImage]) depending on whether sourceImageMeta is null.
+     */
+    fun retryPreview() {
+        val state = _uiState.value
+        if (state.isBusy || state.sourceImageMeta == null) return
+        generatePreview()
+    }
+
     fun exportWallpaper(quality: Int? = null) {
         val state = _uiState.value
         val published = state.publishedPreview ?: return
         if (state.isBusy) return
 
         val operationToken = ++exportOperationToken
-        val operationGeneration = previewGeneration
+        val operationGeneration = previewGeneration.get()
         val operationRevision = published.revision
 
         _uiState.update {
@@ -417,9 +440,13 @@ class EditorViewModel @Inject constructor(
                 val effectiveQuality = quality
                     ?: runCatching { settingsRepository.observeSettings().first().exportJpegQuality }.getOrDefault(92)
 
+                // When the target is LOCK the single published bitmap lives in
+                // `published.home`, but the saved file must still be named wcf_lock_.
+                // BOTH keeps exporting two files: wcf_home_ + wcf_lock_.
+                val homePrefix = if (published.target == WallpaperTarget.LOCK) "wcf_lock" else "wcf_home"
                 val homeExport = exportWallpaper(
                     published.home.bitmap,
-                    FileNameFactory.wallpaperFileName("wcf_home"),
+                    FileNameFactory.wallpaperFileName(homePrefix),
                     effectiveQuality
                 )
                 val lockExport = published.lock?.let {
@@ -456,7 +483,7 @@ class EditorViewModel @Inject constructor(
         if (state.isBusy) return
 
         val operationToken = ++applyOperationToken
-        val operationGeneration = previewGeneration
+        val operationGeneration = previewGeneration.get()
         val operationRevision = published.revision
         val target = published.target
 
@@ -516,19 +543,20 @@ class EditorViewModel @Inject constructor(
     fun clearError() { _uiState.update { it.copy(errorMessage = null) } }
     fun clearSuccess() { _uiState.update { it.copy(successMessage = null) } }
 
-    private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration
+    private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration.get()
 
     /**
      * Closes the publication window before a mutable editor option changes. This
      * ordering prevents an operation completion from certifying revision A after
-     * the UI has already started describing configuration B.
+     * the UI has already started describing configuration B. The last published
+     * preview stays on screen until the re-render replaces it (keep-last-good);
+     * only its certification is invalidated here.
      */
     private fun invalidatePublishedPreview() {
-        ++previewGeneration
+        previewGeneration.incrementAndGet()
         previewJob?.cancel()
         _uiState.update { state ->
             state.copy(
-                publishedPreview = null,
                 isRendering = state.sourceImageMeta != null &&
                     state.deviceProfile != null &&
                     state.behaviorProfile != null,
@@ -550,7 +578,7 @@ class EditorViewModel @Inject constructor(
             if (operationToken != exportOperationToken) {
                 state
             } else {
-                val stillAuthoritative = operationGeneration == previewGeneration &&
+                val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isExporting = false,
@@ -572,7 +600,7 @@ class EditorViewModel @Inject constructor(
             if (operationToken != applyOperationToken) {
                 state
             } else {
-                val stillAuthoritative = operationGeneration == previewGeneration &&
+                val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isApplying = false,
@@ -613,7 +641,6 @@ class EditorViewModel @Inject constructor(
     }
 
     companion object {
-        private const val KEY_IMAGE_URI = "editor_image_uri"
         private const val KEY_CROP_MODE = "editor_crop_mode"
         private const val KEY_TARGET = "editor_target"
         private const val KEY_FILL_MODE = "editor_fill_mode"

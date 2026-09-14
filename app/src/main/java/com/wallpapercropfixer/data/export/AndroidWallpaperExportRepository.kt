@@ -78,7 +78,21 @@ class AndroidWallpaperExportRepository @Inject constructor(
             }
             baseDir.mkdirs()
 
-            val file = File(baseDir, fullName)
+            // Filenames only carry second-resolution timestamps, so a re-save within
+            // the same second would silently overwrite the previous export. Shift to
+            // -1, -2, ... before the extension whenever the target already exists.
+            var file = File(baseDir, fullName)
+            if (file.exists()) {
+                val dot = fullName.lastIndexOf('.')
+                val base = if (dot > 0) fullName.substring(0, dot) else fullName
+                val extension = if (dot > 0) fullName.substring(dot) else ""
+                var index = 1
+                while (file.exists()) {
+                    file = File(baseDir, "$base-$index$extension")
+                    index++
+                }
+            }
+
             file.outputStream().use { out ->
                 val ok = bitmap.compress(format, quality, out)
                 if (!ok) {
@@ -93,7 +107,7 @@ class AndroidWallpaperExportRepository @Inject constructor(
                     ExportDestination.APP_INTERNAL_FILES
                 },
                 pathOrUri = file.absolutePath,
-                displayName = fullName
+                displayName = file.name
             )
         }
     }

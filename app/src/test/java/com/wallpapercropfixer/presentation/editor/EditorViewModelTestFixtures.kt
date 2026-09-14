@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class FakeImageRepository : ImageRepository {
     var meta: SourceImageMeta = SourceImageMeta("file:///none", 4000, 3000, "image/jpeg")
@@ -121,6 +122,18 @@ class FakeExportRepository(
         failWith?.let { throw it }
         exported.add(bitmap to fileName)
         return result
+    }
+}
+
+/** Renderer that fails the first [failuresRemaining] renders, then succeeds. */
+class FlakyRenderer(failuresRemaining: Int = 1) : WallpaperBitmapRenderer {
+    private val remainingFailures = AtomicInteger(failuresRemaining)
+
+    override suspend fun render(request: WallpaperRenderRequest, plan: WallpaperRenderPlan): Bitmap {
+        if (remainingFailures.getAndDecrement() > 0) {
+            throw IllegalStateException("synthetic render failure")
+        }
+        return Bitmap.createBitmap(request.cropMode.ordinal + 1, 10, Bitmap.Config.ARGB_8888)
     }
 }
 
