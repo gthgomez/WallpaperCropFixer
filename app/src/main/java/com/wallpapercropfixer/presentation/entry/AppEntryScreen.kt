@@ -121,7 +121,7 @@ fun AppEntryScreen(
                 Icon(
                     Icons.Default.Settings,
                     contentDescription = stringResource(R.string.settings),
-                    tint = Color(0xFF888888)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -169,7 +169,7 @@ fun AppEntryScreen(
         Text(
             text = stringResource(R.string.entry_subtitle),
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF777777),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp,
             modifier = Modifier.padding(horizontal = 28.dp)
@@ -352,7 +352,7 @@ private fun FeatureCard(icon: ImageVector, title: String, description: String) {
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF888888)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

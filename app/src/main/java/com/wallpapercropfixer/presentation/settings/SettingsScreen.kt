@@ -62,6 +62,9 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    // Controls stay disabled until DataStore's first emission so an early edit
+    // cannot persist the default UserSettings over the stored values.
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
 
     Scaffold(containerColor = Color(0xFFFAFAFA)) { padding ->
@@ -102,7 +105,8 @@ fun SettingsScreen(
                 SettingsCard(title = stringResource(R.string.settings_default_crop_mode)) {
                     ModeChipRow(
                         selected = settings.defaultCropMode,
-                        onSelect = { viewModel.update(settings.copy(defaultCropMode = it)) }
+                        onSelect = { viewModel.update(settings.copy(defaultCropMode = it)) },
+                        enabled = loaded
                     )
                 }
 
@@ -110,7 +114,8 @@ fun SettingsScreen(
                     WallpaperTargetTabs(
                         selected = settings.defaultWallpaperTarget,
                         onSelect = { viewModel.update(settings.copy(defaultWallpaperTarget = it)) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = loaded
                     )
                 }
 
@@ -123,7 +128,7 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.settings_face_aware_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF888888)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val settingsFaceOn = stringResource(R.string.editor_face_on)
                         val settingsFaceOff = stringResource(R.string.editor_face_off)
@@ -134,6 +139,7 @@ fun SettingsScreen(
                         Switch(
                             checked = settings.defaultFaceAwareEnabled,
                             onCheckedChange = { viewModel.update(settings.copy(defaultFaceAwareEnabled = it)) },
+                            enabled = loaded,
                             colors = SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
                             ),
@@ -200,6 +206,7 @@ fun SettingsScreen(
                             onValueChangeFinished = {
                                 viewModel.update(settings.copy(exportJpegQuality = localQuality.toInt()))
                             },
+                            enabled = loaded,
                             valueRange = 60f..100f,
                             steps = 39,
                             colors = SliderDefaults.colors(
@@ -217,8 +224,8 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.settings_export_quality_min), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
-                            Text(stringResource(R.string.settings_export_quality_max), style = MaterialTheme.typography.labelSmall, color = Color(0xFFBBBBBB))
+                            Text(stringResource(R.string.settings_export_quality_min), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.87f))
+                            Text(stringResource(R.string.settings_export_quality_max), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.87f))
                         }
                     }
                 }

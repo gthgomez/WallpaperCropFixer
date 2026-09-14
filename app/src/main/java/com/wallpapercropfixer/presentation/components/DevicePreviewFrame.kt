@@ -8,11 +8,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +47,8 @@ private const val focusStep = 0.05f
  * (e.g. a HOME canvas wider than the visible screen). [focusPoint] is expressed
  * in the rendered-bitmap normalized space; the overlay and tap handling convert
  * through [ViewportTransform] so the crosshair aligns with the subject and taps
- * map back to the correct bitmap position.
+ * map back to the correct bitmap position. The caller sizes the frame through
+ * its modifier (explicit width); height follows [deviceAspectRatio].
  */
 @Composable
 fun DevicePreviewFrame(
@@ -58,8 +60,9 @@ fun DevicePreviewFrame(
 ) {
     val frameShape = RoundedCornerShape(28.dp)
     val haptic = LocalHapticFeedback.current
+    // Keep the latest callback without restarting the tap detector on recomposition.
+    val latestOnFocusTap by rememberUpdatedState(onFocusTap)
     val frameA11y = stringResource(R.string.preview_frame_a11y)
-    val previewA11y = stringResource(R.string.preview_image)
     val emptyText = stringResource(R.string.preview_empty)
     val moveLeftLabel = stringResource(R.string.a11y_focus_move_left)
     val moveRightLabel = stringResource(R.string.a11y_focus_move_right)
@@ -90,7 +93,6 @@ fun DevicePreviewFrame(
 
     Box(
         modifier = modifier
-            .fillMaxWidth(0.55f)
             .aspectRatio(deviceAspectRatio)
             // Soft elevation shadow instead of a hard border — modern photo-app look
             .shadow(
@@ -103,7 +105,9 @@ fun DevicePreviewFrame(
             .background(Color(0xFF1A1A1A))
             .then(
                 if (onFocusTap != null)
-                    Modifier.semantics {
+                    // Merge descendants so the frame description is announced once
+                    // (the image itself carries no description).
+                    Modifier.semantics(mergeDescendants = true) {
                         contentDescription = frameA11y
                         customActions = focusActions
                     }
@@ -116,7 +120,7 @@ fun DevicePreviewFrame(
 
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = previewA11y,
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -126,7 +130,7 @@ fun DevicePreviewFrame(
                     .fillMaxSize()
                     .then(
                         if (onFocusTap != null)
-                            Modifier.pointerInput(onFocusTap, bitmap.width, bitmap.height) {
+                            Modifier.pointerInput(bitmap.width, bitmap.height) {
                                 detectTapGestures { offset ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     val point = ViewportTransform.viewportToBitmap(
@@ -135,7 +139,7 @@ fun DevicePreviewFrame(
                                         bitmapAspect = bitmapAspect,
                                         viewportAspect = size.width.toFloat() / size.height.toFloat()
                                     )
-                                    onFocusTap(
+                                    latestOnFocusTap?.invoke(
                                         FocusPoint(
                                             xNormalized = point.x,
                                             yNormalized = point.y
@@ -156,19 +160,20 @@ fun DevicePreviewFrame(
                     val cx = viewportPoint.x * size.width
                     val cy = viewportPoint.y * size.height
                     val center = Offset(cx, cy)
-                    val ring = 22f
-                    val dot = 6f
+                    // Density-independent crosshair so it keeps its size across screens.
+                    val ring = 22.dp.toPx()
+                    val dot = 6.dp.toPx()
 
                     drawCircle(
                         color = Color.Black.copy(alpha = 0.35f),
-                        radius = ring + 6f,
+                        radius = ring + dot,
                         center = center
                     )
                     drawCircle(
                         color = Color.White,
                         radius = ring,
                         center = center,
-                        style = Stroke(width = 2.5f)
+                        style = Stroke(width = 2.5.dp.toPx())
                     )
                     drawCircle(
                         color = Color.White,
@@ -180,7 +185,7 @@ fun DevicePreviewFrame(
         } else {
             Text(
                 text = emptyText,
-                color = Color(0xFF666666),
+                color = Color.White.copy(alpha = 0.8f),
                 style = MaterialTheme.typography.bodySmall
             )
         }

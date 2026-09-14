@@ -1,8 +1,10 @@
 package com.wallpapercropfixer.presentation.components
 
 import android.graphics.Bitmap
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.wallpapercropfixer.domain.model.FocusPoint
@@ -36,10 +38,16 @@ class DevicePreviewFrameTest {
             DevicePreviewFrame(
                 bitmap = bitmap,
                 deviceAspectRatio = 1080f / 2400f,
-                focusPoint = FocusPoint(0.5f, 0.5f)
+                focusPoint = FocusPoint(0.5f, 0.5f),
+                onFocusTap = { }
             )
         }
-        composeRule.onNodeWithContentDescription("Wallpaper preview").assertIsDisplayed()
+        // The frame announces its description once via merged semantics; the
+        // image itself must not carry a duplicate description.
+        composeRule.onNodeWithContentDescription(
+            "Wallpaper preview. Tap to reposition the crop focus point."
+        ).assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("Wallpaper preview").assertCountEquals(0)
     }
 
     @Test
@@ -49,9 +57,13 @@ class DevicePreviewFrameTest {
             DevicePreviewFrame(
                 bitmap = bitmap,
                 deviceAspectRatio = 1080f / 2400f,
-                focusPoint = FocusPoint(0.5f, 0.5f)
+                focusPoint = FocusPoint(0.5f, 0.5f),
+                onFocusTap = { }
             )
         }
-        composeRule.onNodeWithContentDescription("Wallpaper preview").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            "Wallpaper preview. Tap to reposition the crop focus point."
+        ).assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("Wallpaper preview").assertCountEquals(0)
     }
 }

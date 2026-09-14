@@ -41,6 +41,7 @@
     <string name="editor_device_info">Optimized for your %1$s %2$s screen</string>
     <string name="editor_save">Save image</string>
     <string name="editor_apply_wallpaper">Apply Wallpaper</string>
+    <string name="editor_error_retry">Try again</string>
     <string name="editor_applied_home">Wallpaper applied to home screen</string>
     <string name="editor_applied_lock">Wallpaper applied to lock screen</string>
     <string name="editor_applied_both">Wallpaper applied to home &amp; lock screen</string>
@@ -83,8 +84,8 @@
     <string name="settings_face_aware_toggle">Face-aware crop by default, %1$s</string>
     <string name="settings_export_quality">Export Quality</string>
     <string name="settings_export_quality_value">%1$d%%</string>
-    <string name="settings_export_quality_min">60%%</string>
-    <string name="settings_export_quality_max">100%%</string>
+    <string name="settings_export_quality_min">60%</string>
+    <string name="settings_export_quality_max">100%</string>
     <string name="settings_privacy_policy">Privacy policy</string>
 
     <!-- Status / error messages (resolved via UiMessage) -->

@@ -3,6 +3,7 @@ package com.wallpapercropfixer.presentation.editor
 import android.content.res.Configuration
 import android.os.Build
 import android.view.HapticFeedbackConstants
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -40,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -72,6 +74,7 @@ import com.wallpapercropfixer.domain.model.WallpaperTarget
 import com.wallpapercropfixer.presentation.components.DevicePreviewFrame
 import com.wallpapercropfixer.presentation.components.ModeChipRow
 import com.wallpapercropfixer.presentation.components.WallpaperTargetTabs
+import kotlin.math.min
 
 @Composable
 fun WallpaperEditorScreen(
@@ -85,6 +88,19 @@ fun WallpaperEditorScreen(
     val view = LocalView.current
     val configuration = LocalConfiguration.current
 
+    // System back during an in-flight apply/export would cancel the operation and
+    // can leave the wallpaper half-applied, so back is swallowed while busy.
+    BackHandler(enabled = state.isBusy) { }
+
+    // Frame width bounded by both the screen width and a height-derived cap so a
+    // tall preview cannot push the Apply buttons below the fold on tablets or in
+    // landscape. The 40.dp side padding sits outside this width (0.55 × screen
+    // width plus padding stays within the screen for any realistic width).
+    val frameWidth = min(
+        configuration.screenWidthDp * 0.55f,
+        configuration.screenHeightDp * 0.48f * state.deviceAspectRatio
+    ).dp
+
     // Resolve message strings in composable scope so they track configuration changes.
     val errorMessageText = state.errorMessage?.let { msg ->
         stringResource(msg.resId, *msg.formatArgs.toTypedArray())
@@ -96,14 +112,15 @@ fun WallpaperEditorScreen(
     LaunchedEffect(imageUri) { viewModel.loadImage(imageUri) }
 
     // Re-resolve device metrics after orientation/window changes so the canvas and
-    // preview always match the current display.
-    LaunchedEffect(configuration.orientation) {
+    // preview always match the current display. smallestScreenWidthDp catches
+    // fold/unfold resizes that keep the orientation unchanged.
+    LaunchedEffect(configuration.orientation, configuration.smallestScreenWidthDp) {
         viewModel.refreshForConfigurationChange()
     }
 
     LaunchedEffect(errorMessageText) {
         if (errorMessageText != null) {
-            snackbarHostState.showSnackbar(errorMessageText)
+            snackbarHostState.showSnackbar(errorMessageText, duration = SnackbarDuration.Long)
             viewModel.clearError()
         }
     }
@@ -124,6 +141,7 @@ fun WallpaperEditorScreen(
             Box(
                 Modifier
                     .fillMaxSize()
+                    .padding(padding)
                     .background(Color(0xFFFAFAFA)),
                 contentAlignment = Alignment.Center
             ) {
@@ -136,7 +154,7 @@ fun WallpaperEditorScreen(
                     Text(
                         stringResource(R.string.editor_loading_photo),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF888888)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -179,7 +197,11 @@ fun WallpaperEditorScreen(
                     Icon(
                         Icons.Default.RestartAlt,
                         contentDescription = stringResource(R.string.editor_reset_defaults),
-                        tint = if (state.sourceImageMeta != null) Color(0xFF666666) else Color(0xFFCCCCCC)
+                        tint = if (state.sourceImageMeta != null) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            Color(0xFFCCCCCC)
+                        }
                     )
                 }
             }
@@ -193,7 +215,9 @@ fun WallpaperEditorScreen(
                     animationSpec = tween(durationMillis = 220),
                     label = "preview_crossfade"
                 ) { currentBitmap ->
-                    val canvasFocus = state.renderPlan?.let { plan ->
+                    // The plan matching the bitmap on screen (LOCK plan while the
+                    // lock preview is shown) so the crosshair and taps stay aligned.
+                    val canvasFocus = state.activeRenderPlan?.let { plan ->
                         val fp = state.manualFocusPoint ?: state.subjectAnalysis?.suggestedFocusPoint
                         val meta = state.sourceImageMeta
                         if (fp != null && meta != null) {
@@ -215,7 +239,7 @@ fun WallpaperEditorScreen(
                         focusPoint = canvasFocus,
                         onFocusTap = if (state.activeBitmap != null) {
                             { tappedCanvasFocus ->
-                                val plan = state.renderPlan
+                                val plan = state.activeRenderPlan
                                 val meta = state.sourceImageMeta
                                 if (plan != null && meta != null) {
                                     val sourceFocus = CropMath.canvasFocusToSourceFocus(
@@ -233,16 +257,42 @@ fun WallpaperEditorScreen(
                                 }
                             }
                         } else null,
-                        modifier = Modifier.padding(horizontal = 40.dp)
+                        modifier = Modifier
+                            .padding(horizontal = 40.dp)
+                            .width(frameWidth)
                     )
                 }
 
                 if (state.isBusy) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    // Scrimmed circle so the white spinner reads over any background.
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+            }
+
+            if (state.activeBitmap == null && !state.isBusy && state.errorMessage != null) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = {
+                        if (state.sourceImageMeta == null) {
+                            viewModel.loadImage(imageUri)
+                        } else {
+                            viewModel.retryPreview()
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.editor_error_retry))
                 }
             }
 
@@ -276,7 +326,7 @@ fun WallpaperEditorScreen(
                     text = if (state.previewingLock) stringResource(R.string.editor_lock_adjusts_both)
                            else stringResource(R.string.editor_tap_to_reposition),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFAAAAAA)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
                 )
             }
 
@@ -289,7 +339,7 @@ fun WallpaperEditorScreen(
                         profile.model
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFBBBBBB)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.87f)
                 )
             }
 
@@ -302,14 +352,14 @@ fun WallpaperEditorScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFFBBBBBB),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.87f),
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         stringResource(R.string.editor_launcher_disclaimer),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFBBBBBB)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.87f)
                     )
                 }
             }
@@ -351,7 +401,7 @@ fun WallpaperEditorScreen(
                     Text(
                         stringResource(R.string.editor_apply_to),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF888888)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     WallpaperTargetTabs(
@@ -376,7 +426,7 @@ fun WallpaperEditorScreen(
                         Text(
                             state.cropMode.descriptionRes().let { stringResource(it) },
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF999999)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -413,7 +463,7 @@ fun WallpaperEditorScreen(
                             Text(
                                 stringResource(R.string.editor_face_aware_desc),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF999999)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
                             )
                         }
                         val faceAwareOn = stringResource(R.string.editor_face_on)

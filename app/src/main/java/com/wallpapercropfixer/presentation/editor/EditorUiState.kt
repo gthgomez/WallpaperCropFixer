@@ -57,7 +57,7 @@ data class EditorUiState(
     val errorMessage: UiMessage? = null,
     val successMessage: UiMessage? = null
 ) {
-    /** Primary preview (HOME, or LOCK when target == LOCK). */
+    /** The HOME preview bitmap. */
     val previewBitmap: Bitmap?
         get() = publishedPreview?.home?.bitmap
 
@@ -65,9 +65,23 @@ data class EditorUiState(
     val lockPreviewBitmap: Bitmap?
         get() = publishedPreview?.lock?.bitmap
 
-    /** The plan that belongs to the currently published bitmap. */
+    /** The plan that belongs to the HOME bitmap. */
     val renderPlan: WallpaperRenderPlan?
         get() = publishedPreview?.home?.plan
+
+    /**
+     * The plan matching the bitmap currently shown in the frame: the LOCK plan
+     * while the lock preview is displayed, otherwise the HOME plan.
+     */
+    val activeRenderPlan: WallpaperRenderPlan?
+        get() {
+            val published = publishedPreview ?: return null
+            return if (previewingLock && published.lock != null) {
+                published.lock.plan
+            } else {
+                published.home.plan
+            }
+        }
 
     /** True while any operation can invalidate or consume the current preview. */
     val isBusy: Boolean
