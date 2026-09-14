@@ -61,7 +61,6 @@ fun DevicePreviewFrame(
     val frameShape = RoundedCornerShape(28.dp)
     val haptic = LocalHapticFeedback.current
     val frameA11y = stringResource(R.string.preview_frame_a11y)
-    val previewA11y = stringResource(R.string.preview_image)
     val emptyText = stringResource(R.string.preview_empty)
     val centerLabel = stringResource(R.string.a11y_focus_center)
     val moveLeftLabel = stringResource(R.string.a11y_focus_move_left)
@@ -121,7 +120,7 @@ fun DevicePreviewFrame(
             .background(Color(0xFF1A1A1A))
             .then(
                 if (onFocusTap != null)
-                    Modifier.semantics {
+                    Modifier.semantics(mergeDescendants = true) {
                         contentDescription = frameA11y
                         customActions = focusActions
                     }
@@ -134,7 +133,9 @@ fun DevicePreviewFrame(
 
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = previewA11y,
+                // Announced once via the merged frame node above — a separate
+                // image description would double the TalkBack announcement.
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )

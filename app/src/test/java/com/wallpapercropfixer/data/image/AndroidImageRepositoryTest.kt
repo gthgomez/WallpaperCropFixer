@@ -48,4 +48,22 @@ class AndroidImageRepositoryTest {
         assertTrue(decoded.width <= 600)
         assertTrue(decoded.height <= 400)
     }
+
+    @Test
+    fun `computeSampleSize keeps decoded dimensions within the decode budget`() {
+        val context = RuntimeEnvironment.getApplication()
+        val repo = AndroidImageRepository(context)
+
+        // 9000x9000 against a 3225x4096 budget used to stop at sampleSize 2 and
+        // decode 4500x4500 (~20 MP); the halving must continue until it fits.
+        assertEquals(4, repo.computeSampleSize(9000, 9000, 3225, 4096))
+        assertTrue(9000 / repo.computeSampleSize(9000, 9000, 3225, 4096) <= 3225)
+        assertTrue(9000 / repo.computeSampleSize(9000, 9000, 3225, 4096) <= 4096)
+
+        // Sources already within budget are never downsampled (no upscaling).
+        assertEquals(1, repo.computeSampleSize(800, 600, 1080, 2400))
+
+        // Exact-fit boundaries stay at the previously chosen sample size.
+        assertEquals(4, repo.computeSampleSize(1200, 800, 300, 200))
+    }
 }

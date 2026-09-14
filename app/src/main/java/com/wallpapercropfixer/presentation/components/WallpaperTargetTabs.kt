@@ -18,7 +18,8 @@ import com.wallpapercropfixer.domain.model.WallpaperTarget
 fun WallpaperTargetTabs(
     selected: WallpaperTarget,
     onSelect: (WallpaperTarget) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val targets = listOf(WallpaperTarget.HOME, WallpaperTarget.LOCK, WallpaperTarget.BOTH)
 
@@ -27,6 +28,7 @@ fun WallpaperTargetTabs(
             SegmentedButton(
                 selected = target == selected,
                 onClick = { onSelect(target) },
+                enabled = enabled,
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = targets.size),
                 label = { Text(stringResource(target.labelRes())) },
                 modifier = Modifier.heightIn(min = 48.dp)

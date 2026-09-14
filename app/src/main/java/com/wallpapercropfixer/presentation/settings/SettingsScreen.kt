@@ -65,8 +65,12 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     SettingsContent(
         settings = settings,
+        // Disabled until the first DataStore emission: an edit against the default
+        // UserSettings() would persist defaults over the user's stored values.
+        enabled = loaded,
         onUpdate = viewModel::update,
         onBack = onBack
     )
@@ -76,6 +80,7 @@ fun SettingsScreen(
 @Composable
 internal fun SettingsContent(
     settings: UserSettings,
+    enabled: Boolean = true,
     onUpdate: (UserSettings) -> Unit,
     onBack: () -> Unit
 ) {
@@ -118,7 +123,8 @@ internal fun SettingsContent(
                 SettingsCard(title = stringResource(R.string.settings_default_crop_mode)) {
                     ModeChipRow(
                         selected = settings.defaultCropMode,
-                        onSelect = { onUpdate(settings.copy(defaultCropMode = it)) }
+                        onSelect = { onUpdate(settings.copy(defaultCropMode = it)) },
+                        enabled = enabled
                     )
                 }
 
@@ -126,6 +132,7 @@ internal fun SettingsContent(
                     WallpaperTargetTabs(
                         selected = settings.defaultWallpaperTarget,
                         onSelect = { onUpdate(settings.copy(defaultWallpaperTarget = it)) },
+                        enabled = enabled,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -149,6 +156,7 @@ internal fun SettingsContent(
                         )
                         Switch(
                             checked = settings.defaultFaceAwareEnabled,
+                            enabled = enabled,
                             onCheckedChange = { onUpdate(settings.copy(defaultFaceAwareEnabled = it)) },
                             colors = SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -226,6 +234,7 @@ internal fun SettingsContent(
 
                         Slider(
                             value = localQuality,
+                            enabled = enabled,
                             onValueChange = { localQuality = it },
                             onValueChangeFinished = {
                                 onUpdate(settings.copy(exportJpegQuality = localQuality.toInt()))

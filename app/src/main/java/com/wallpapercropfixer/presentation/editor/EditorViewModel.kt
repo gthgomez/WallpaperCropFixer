@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 /**
@@ -76,8 +78,9 @@ class EditorViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
-    @Volatile
-    private var previewGeneration = 0
+    // Generation tokens are bumped from both the main thread (option changes) and
+    // IO-dispatched load paths, so they must be atomics.
+    private val previewGeneration = AtomicInteger(0)
 
     @Volatile
     private var loadGeneration = 0
@@ -85,8 +88,7 @@ class EditorViewModel @Inject constructor(
     private var previewJob: Job? = null
     private var loadJob: Job? = null
 
-    @Volatile
-    private var publishedRevision = 0L
+    private val publishedRevision = AtomicLong(0L)
 
     @Volatile
     private var applyOperationToken = 0L
@@ -138,7 +140,7 @@ class EditorViewModel @Inject constructor(
         }
 
         val gen = ++loadGeneration
-        ++previewGeneration
+        previewGeneration.incrementAndGet()
         ++applyOperationToken
         ++exportOperationToken
         previewJob?.cancel()
@@ -177,6 +179,9 @@ class EditorViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        // Stay busy (face analysis + first render) until the first
+                        // preview publishes, so the UI never shows a dead empty frame.
+                        isRendering = true,
                         sourceImageMeta = meta,
                         deviceProfile = deviceProfile,
                         behaviorProfile = behaviorProfile
@@ -342,11 +347,11 @@ class EditorViewModel @Inject constructor(
         val device = state.deviceProfile ?: return
         val behavior = state.behaviorProfile ?: return
 
-        val generation = ++previewGeneration
+        val generation = previewGeneration.incrementAndGet()
         previewJob?.cancel()
 
         // Disable apply/save immediately and atomically with the option change.
-        val revision = ++publishedRevision
+        val revision = publishedRevision.incrementAndGet()
         _uiState.update {
             it.copy(
                 isRendering = true,
@@ -398,7 +403,7 @@ class EditorViewModel @Inject constructor(
                     }
                 )
                 _uiState.update {
-                    if (generation != previewGeneration) {
+                    if (generation != previewGeneration.get()) {
                         it
                     } else {
                         it.copy(
@@ -427,7 +432,7 @@ class EditorViewModel @Inject constructor(
         if (state.isBusy) return
 
         val operationToken = ++exportOperationToken
-        val operationGeneration = previewGeneration
+        val operationGeneration = previewGeneration.get()
         val operationRevision = published.revision
 
         _uiState.update {
@@ -439,9 +444,13 @@ class EditorViewModel @Inject constructor(
                 val effectiveQuality = quality
                     ?: runCatching { settingsRepository.observeSettings().first().exportJpegQuality }.getOrDefault(92)
 
+                // When the target is LOCK the single published bitmap lives in
+                // `published.home`, but the saved file must still be named wcf_lock_.
+                // BOTH keeps exporting two files: wcf_home_ + wcf_lock_.
+                val homePrefix = if (published.target == WallpaperTarget.LOCK) "wcf_lock" else "wcf_home"
                 val homeExport = exportWallpaper(
                     published.home.bitmap,
-                    FileNameFactory.wallpaperFileName("wcf_home"),
+                    FileNameFactory.wallpaperFileName(homePrefix),
                     effectiveQuality
                 )
                 val lockExport = published.lock?.let {
@@ -478,7 +487,7 @@ class EditorViewModel @Inject constructor(
         if (state.isBusy) return
 
         val operationToken = ++applyOperationToken
-        val operationGeneration = previewGeneration
+        val operationGeneration = previewGeneration.get()
         val operationRevision = published.revision
         val target = published.target
 
@@ -538,7 +547,7 @@ class EditorViewModel @Inject constructor(
     fun clearError() { _uiState.update { it.copy(errorMessage = null) } }
     fun clearSuccess() { _uiState.update { it.copy(successMessage = null) } }
 
-    private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration
+    private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration.get()
 
     /**
      * Closes the publication window before a mutable editor option changes. The last
@@ -546,7 +555,7 @@ class EditorViewModel @Inject constructor(
      * the Home/Lock viewing tab is preserved for same-image option changes.
      */
     private fun invalidatePublishedPreview() {
-        ++previewGeneration
+        previewGeneration.incrementAndGet()
         previewJob?.cancel()
         _uiState.update { state ->
             state.copy(
@@ -572,7 +581,7 @@ class EditorViewModel @Inject constructor(
             if (operationToken != exportOperationToken) {
                 state
             } else {
-                val stillAuthoritative = operationGeneration == previewGeneration &&
+                val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isExporting = false,
@@ -594,7 +603,7 @@ class EditorViewModel @Inject constructor(
             if (operationToken != applyOperationToken) {
                 state
             } else {
-                val stillAuthoritative = operationGeneration == previewGeneration &&
+                val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isApplying = false,

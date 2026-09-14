@@ -39,7 +39,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -117,15 +119,22 @@ fun WallpaperEditorScreen(
 
     LaunchedEffect(imageUri) { viewModel.loadImage(imageUri) }
 
+    // System back during an in-flight apply/export would cancel the operation and
+    // can leave the wallpaper half-applied, so back is swallowed while busy.
+    BackHandler(enabled = state.isBusy) { }
+
     // Re-resolve device metrics after orientation/window changes so the canvas and
-    // preview always match the current display.
-    LaunchedEffect(configuration.orientation) {
+    // preview always match the current display. smallestScreenWidthDp catches
+    // fold/unfold resizes that keep the orientation unchanged.
+    LaunchedEffect(configuration.orientation, configuration.smallestScreenWidthDp) {
         viewModel.refreshForConfigurationChange()
     }
 
     LaunchedEffect(errorMessageText) {
         if (errorMessageText != null) {
-            snackbarHostState.showSnackbar(errorMessageText)
+            // Long duration: partial-failure text (e.g. one target set, the other not)
+            // is easy to miss at Short.
+            snackbarHostState.showSnackbar(errorMessageText, duration = SnackbarDuration.Long)
             viewModel.clearError()
         }
     }

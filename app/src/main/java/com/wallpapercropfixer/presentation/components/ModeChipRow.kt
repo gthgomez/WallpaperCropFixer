@@ -20,7 +20,8 @@ import com.wallpapercropfixer.domain.model.CropMode
 fun ModeChipRow(
     selected: CropMode,
     onSelect: (CropMode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
@@ -33,6 +34,7 @@ fun ModeChipRow(
                 selected = mode == selected,
                 onClick = { onSelect(mode) },
                 label = { Text(label) },
+                enabled = enabled,
                 modifier = Modifier
                     .padding(vertical = 4.dp)
                     .semantics { contentDescription = a11y }

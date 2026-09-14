@@ -44,19 +44,26 @@ class MlKitFaceDetectionRepository @Inject constructor(
 
         val image = InputImage.fromBitmap(bitmap, 0)
 
+        val task = detector.process(image)
         val faces = suspendCancellableCoroutine<List<Face>> { cont ->
-            detector.process(image)
-                .addOnSuccessListener { result ->
-                    // Release resources only after ML Kit has consumed the bitmap.
-                    bitmap.recycle()
-                    detector.close()
-                    cont.resume(result)
-                }
-                .addOnFailureListener { e ->
-                    bitmap.recycle()
-                    detector.close()
-                    cont.resumeWithException(e)
-                }
+            task.addOnSuccessListener { result ->
+                // Release resources only after ML Kit has consumed the bitmap.
+                bitmap.recycle()
+                detector.close()
+                cont.resume(result)
+            }
+            task.addOnFailureListener { e ->
+                bitmap.recycle()
+                detector.close()
+                cont.resumeWithException(e)
+            }
+            // Cancelling the caller must also abort the underlying ML Kit work.
+            // GMS Task exposes no cancel(), but closing the detector fails any
+            // pending detection, which settles the task and routes cleanup through
+            // the listeners above (bitmap recycle + detector close).
+            cont.invokeOnCancellation {
+                runCatching { detector.close() }
+            }
         }
 
         val faceBounds = faces.map { face ->
