@@ -410,9 +410,10 @@ class EditorViewModelConcurrencyTest {
         val renderer = FlakyRenderer(failuresRemaining = 1)
         val vm = buildEditorViewModel(renderer = renderer)
         vm.loadImage("file:///photo")
-        waitForCondition { !vm.uiState.value.isBusy }
+        // Wait for the first render to settle definitively: isBusy starts false
+        // before the IO load begins, so waiting on it alone can race the load.
+        waitForCondition { vm.uiState.value.renderFailed && !vm.uiState.value.isBusy }
 
-        assertTrue("a failed first render must surface the failure state", vm.uiState.value.renderFailed)
         assertNull(vm.uiState.value.previewBitmap)
 
         vm.retryRender()
