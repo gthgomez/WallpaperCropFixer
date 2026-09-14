@@ -255,11 +255,14 @@ class EditorViewModelConcurrencyTest {
         assertEquals(1, applyRepo.applied.size)
         assertEquals(appliedBitmap, applyRepo.applied.single().first)
         // Keep-last-good: revision A stays on screen until revision B lands, but the
-        // stale apply completion must not certify it.
+        // stale apply completion must not certify it — display comes from the
+        // retained snapshot while eligibility stays withdrawn.
+        assertNull("eligibility must stay withdrawn while render B is in flight",
+            vm.uiState.value.publishedPreview)
         assertEquals("revision A stays visible while render B is in flight",
-            appliedBitmap, vm.uiState.value.previewBitmap)
+            appliedBitmap, vm.uiState.value.activeBitmap)
         assertEquals("retained preview must still be revision A",
-            appliedRevision, vm.uiState.value.publishedPreview!!.revision)
+            appliedRevision, vm.uiState.value.retainedPreview!!.revision)
 
         renderB.complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap?.width == CropMode.FILL.ordinal + 1 }
@@ -294,11 +297,14 @@ class EditorViewModelConcurrencyTest {
         assertNull("stale export must not certify revision A", vm.uiState.value.successMessage)
         assertEquals(exportedBitmap, exportRepo.exported.single().first)
         // Keep-last-good: revision A stays on screen until revision B lands, but the
-        // stale export completion must not certify it.
+        // stale export completion must not certify it — display comes from the
+        // retained snapshot while eligibility stays withdrawn.
+        assertNull("eligibility must stay withdrawn while render B is in flight",
+            vm.uiState.value.publishedPreview)
         assertEquals("revision A stays visible while render B is in flight",
-            exportedBitmap, vm.uiState.value.previewBitmap)
+            exportedBitmap, vm.uiState.value.activeBitmap)
         assertEquals("retained preview must still be revision A",
-            exportedRevision, vm.uiState.value.publishedPreview!!.revision)
+            exportedRevision, vm.uiState.value.retainedPreview!!.revision)
 
         renderB.complete(Unit)
         waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap != null }
@@ -384,9 +390,11 @@ class EditorViewModelConcurrencyTest {
 
         assertTrue("re-render must be in flight", vm.uiState.value.isRendering)
         assertEquals("last good preview must stay visible while re-rendering",
-            first, vm.uiState.value.previewBitmap)
+            first, vm.uiState.value.activeBitmap)
+        assertNull("eligibility must be withdrawn during the re-render",
+            vm.uiState.value.publishedPreview)
         assertEquals("retained preview must still be the old revision",
-            firstRevision, vm.uiState.value.publishedPreview!!.revision)
+            firstRevision, vm.uiState.value.retainedPreview!!.revision)
 
         renderer.gates.getValue(CropMode.FILL).complete(Unit)
         waitForCondition {
@@ -394,28 +402,28 @@ class EditorViewModelConcurrencyTest {
         }
         assertTrue(vm.uiState.value.publishedPreview!!.revision > firstRevision)
         assertTrue("the new revision must replace the retained bitmap",
-            vm.uiState.value.previewBitmap !== first)
+            vm.uiState.value.activeBitmap !== first)
     }
 
     @Test
-    fun `retryPreview recovers after a failed render`() {
+    fun `retryRender recovers after a failed render`() {
         val renderer = FlakyRenderer(failuresRemaining = 1)
         val vm = buildEditorViewModel(renderer = renderer)
         vm.loadImage("file:///photo")
         waitForCondition { !vm.uiState.value.isBusy }
 
-        assertEquals(R.string.error_preview, vm.uiState.value.errorMessage?.resId)
+        assertTrue("a failed first render must surface the failure state", vm.uiState.value.renderFailed)
         assertNull(vm.uiState.value.previewBitmap)
 
-        vm.retryPreview()
+        vm.retryRender()
         waitForCondition { !vm.uiState.value.isBusy }
 
-        assertNull("retry must clear the preview error", vm.uiState.value.errorMessage)
+        assertFalse("retry must clear the failure state", vm.uiState.value.renderFailed)
         assertNotNull("retry must publish a preview", vm.uiState.value.previewBitmap)
     }
 
     @Test
-    fun `retryPreview does not stack a second render while busy`() {
+    fun `retryRender does not stack a second render while busy`() {
         val renderer = FakeWallpaperBitmapRenderer()
         val vm = buildEditorViewModel(renderer = renderer)
         vm.loadImage("file:///photo")
@@ -426,7 +434,7 @@ class EditorViewModelConcurrencyTest {
         awaitRenderStarted(renderer, CropMode.BALANCED, 2)
         val callsBeforeRetry = renderer.renderCalls
 
-        vm.retryPreview()
+        vm.retryRender()
 
         assertEquals("retry must be ignored while a render is in flight",
             callsBeforeRetry, renderer.renderCalls)
@@ -436,11 +444,11 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
-    fun `retryPreview does nothing before an image is loaded`() {
+    fun `retryRender does nothing before an image is loaded`() {
         val renderer = FakeWallpaperBitmapRenderer()
         val vm = buildEditorViewModel(renderer = renderer)
 
-        vm.retryPreview()
+        vm.retryRender()
 
         assertEquals(0, renderer.renderCalls)
         assertFalse(vm.uiState.value.isBusy)

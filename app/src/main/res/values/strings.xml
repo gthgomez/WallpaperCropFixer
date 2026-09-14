@@ -6,42 +6,48 @@
     <!-- Common -->
     <string name="back">Back</string>
     <string name="settings">Settings</string>
+    <string name="action_retry">Retry</string>
 
     <!-- Entry screen -->
-    <string name="entry_title">Wallpaper Crop Fixer</string>
-    <string name="entry_subtitle">Preview how your photo will fit before you set it as your wallpaper.</string>
+    <string name="entry_headline">Your photo. A better fit.</string>
+    <string name="entry_desc">Give your photo room to breathe. Preview the fit, then set your wallpaper.</string>
     <string name="entry_choose_photo">Choose a Photo</string>
     <string name="entry_preparing_photo">Preparing photo…</string>
     <string name="entry_copy_failed">Couldn\'t read that photo. Try choosing it again.</string>
-    <string name="entry_feature_face_title">Face-aware crop</string>
-    <string name="entry_feature_face_desc">Centers framing on detected faces automatically</string>
-    <string name="entry_feature_modes_title">Three crop modes</string>
-    <string name="entry_feature_modes_desc">Safe Fit, Balanced, or Fill — choose what matters most</string>
-    <string name="entry_feature_preview_title">Framing preview</string>
-    <string name="entry_feature_preview_desc">Preview how your photo will fit your screen</string>
+    <string name="entry_demo_label">Illustrative example</string>
+    <string name="entry_privacy">Photos processed on your device. No photo upload.</string>
+    <string name="entry_help_title">Start with a photo — not a tutorial.</string>
+    <string name="entry_help_body">Adjust the fit only when you need to.</string>
 
     <!-- Editor screen -->
-    <string name="editor_title">Edit Wallpaper</string>
+    <string name="editor_title">Make it fit</string>
     <string name="editor_reset_defaults">Reset to defaults</string>
     <string name="editor_loading_photo">Loading photo…</string>
-    <string name="editor_tap_to_reposition">Tap preview to reposition focus</string>
-    <string name="editor_lock_adjusts_both">Lock screen preview · focus adjusts both</string>
-    <string name="editor_showing_lock">Showing lock screen</string>
-    <string name="editor_showing_home">Showing home screen</string>
+    <string name="editor_viewing">Viewing</string>
+    <string name="preview_screen_home">Home</string>
+    <string name="preview_screen_lock">Lock</string>
+    <string name="status_preview_ready">Preview ready</string>
+    <string name="status_preparing">Preparing preview…</string>
+    <string name="status_updating">Updating · previous preview shown</string>
+    <string name="status_update_failed">Update failed · previous preview shown</string>
+    <string name="editor_focus_linked">Focus is linked for Home and Lock.</string>
     <string name="editor_apply_to">Apply to</string>
-    <string name="editor_crop_mode">Crop mode</string>
+    <string name="editor_apply_dest_home">Apply to Home</string>
+    <string name="editor_apply_dest_lock">Apply to Lock</string>
+    <string name="editor_apply_dest_both">Apply to both</string>
+    <string name="editor_crop_mode">Framing</string>
     <string name="editor_face_aware">Face-aware crop</string>
     <string name="editor_face_aware_desc">Centers crop around detected faces</string>
     <string name="editor_face_aware_toggle">Face-aware crop, %1$s</string>
     <string name="editor_face_on">on</string>
     <string name="editor_face_off">off</string>
     <string name="editor_face_aware_unavailable">Face framing wasn\'t available for this photo, so center framing was used.</string>
+    <string name="editor_background">Background</string>
+    <string name="editor_background_when_space">When there is space</string>
     <string name="editor_launcher_disclaimer">Your launcher may crop or zoom wallpapers differently from this preview.</string>
     <string name="editor_low_resolution">Low resolution — may appear pixelated</string>
     <string name="editor_device_info">Optimized for your %1$s %2$s screen</string>
-    <string name="editor_save">Save image</string>
-    <string name="editor_apply_wallpaper">Apply Wallpaper</string>
-    <string name="editor_error_retry">Try again</string>
+    <string name="editor_save">Save</string>
     <string name="editor_applied_home">Wallpaper applied to home screen</string>
     <string name="editor_applied_lock">Wallpaper applied to lock screen</string>
     <string name="editor_applied_both">Wallpaper applied to home &amp; lock screen</string>
@@ -51,14 +57,15 @@
         <item quantity="other">%1$d faces detected</item>
     </plurals>
 
-    <!-- Crop modes -->
+    <!-- Crop modes. Safe Fit wording is deliberately accurate: it only pads when a
+         crop would remove >20% of the photo (or clip a face); light crops still crop. -->
     <string name="crop_mode_safe_fit">Safe Fit</string>
     <string name="crop_mode_balanced">Balanced</string>
     <string name="crop_mode_fill">Fill</string>
-    <string name="crop_mode_safe_fit_desc">Full photo · adds padding</string>
+    <string name="crop_mode_safe_fit_desc">Fewer cuts · pads when needed</string>
     <string name="crop_mode_balanced_desc">Balanced coverage</string>
     <string name="crop_mode_fill_desc">Fills screen · may crop</string>
-    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — preserves the full photo, adds padding if needed</string>
+    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — trims a little, and pads the background instead of cutting away much of the photo</string>
     <string name="crop_mode_balanced_a11y">Crop mode: Balanced — balances coverage and subject preservation</string>
     <string name="crop_mode_fill_a11y">Crop mode: Fill — covers the entire screen, may crop edges</string>
 
@@ -67,8 +74,14 @@
     <string name="target_lock">Lock</string>
     <string name="target_both">Both</string>
 
+    <!-- Background finish -->
+    <string name="fill_blur">Blur</string>
+    <string name="fill_solid">Solid</string>
+    <string name="fill_gradient">Gradient</string>
+
     <!-- Preview frame -->
     <string name="preview_frame_a11y">Wallpaper preview. Tap to reposition the crop focus point.</string>
+    <string name="a11y_focus_center">Center crop focus</string>
     <string name="a11y_focus_move_left">Move crop focus left</string>
     <string name="a11y_focus_move_right">Move crop focus right</string>
     <string name="a11y_focus_move_up">Move crop focus up</string>
@@ -77,8 +90,10 @@
     <string name="preview_empty">Select a photo to preview</string>
 
     <!-- Settings screen -->
-    <string name="settings_default_crop_mode">Default Crop Mode</string>
+    <string name="settings_default_crop_mode">Default Framing</string>
     <string name="settings_default_target">Default Target</string>
+    <string name="settings_default_fill">Default Background Finish</string>
+    <string name="settings_default_fill_desc">Used when your framing choice leaves space around the photo</string>
     <string name="settings_face_aware_default">Face-Aware Crop by Default</string>
     <string name="settings_face_aware_desc">Centers crop on detected faces</string>
     <string name="settings_face_aware_toggle">Face-aware crop by default, %1$s</string>
@@ -90,7 +105,7 @@
 
     <!-- Status / error messages (resolved via UiMessage) -->
     <string name="error_load_image">Couldn\'t read that photo. Try choosing it again.</string>
-    <string name="error_preview">Couldn\'t generate the preview. Please try again.</string>
+    <string name="error_photo_missing">That photo is no longer available. Choose another one.</string>
     <string name="error_export">Couldn\'t save the wallpaper. Check available storage and try again.</string>
     <string name="error_apply_generic">Couldn\'t set the wallpaper. Please try again.</string>
     <string name="error_apply_unsupported">This device doesn\'t support changing wallpapers.</string>

@@ -13,42 +13,80 @@ import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Plain-JUnit coverage for the preview/plan selection helpers on [EditorUiState]. */
+/**
+ * Plain-JUnit coverage for the displayed-vs-eligible snapshot selection on
+ * [EditorUiState] — in particular that the LOCK viewing tab in BOTH mode pairs
+ * the lock bitmap with the LOCK plan (HOME canvases are wider, so using the
+ * HOME plan misplaces the focus overlay by several percent).
+ */
 class EditorUiStateTest {
 
     private val homePlan = testPlan(WallpaperTarget.HOME)
     private val lockPlan = testPlan(WallpaperTarget.LOCK)
 
     @Test
-    fun `activeRenderPlan returns the home plan when previewing home`() {
+    fun `displayedPreview uses the home render when viewing home`() {
         val state = stateWithPreview(withLock = true, previewingLock = false)
-        assertEquals(homePlan, state.activeRenderPlan)
+        assertEquals(homePlan, state.displayedPreview?.plan)
     }
 
     @Test
-    fun `activeRenderPlan returns the lock plan while previewing lock`() {
+    fun `displayedPreview selects the lock render and its plan while previewing lock in BOTH`() {
         val state = stateWithPreview(withLock = true, previewingLock = true)
-        assertEquals(lockPlan, state.activeRenderPlan)
+        assertEquals("the lock tab must pair the lock bitmap with the lock plan",
+            lockPlan, state.displayedPreview?.plan)
     }
 
     @Test
-    fun `activeRenderPlan falls back to the home plan when no lock preview exists`() {
+    fun `displayedPreview falls back to the home render when BOTH has no lock render`() {
         val state = stateWithPreview(withLock = false, previewingLock = true)
-        assertEquals(homePlan, state.activeRenderPlan)
+        assertEquals(homePlan, state.displayedPreview?.plan)
     }
 
     @Test
-    fun `activeRenderPlan is null without a published preview`() {
-        assertNull(EditorUiState(previewingLock = true).activeRenderPlan)
+    fun `displayedPreview is null without any publication`() {
+        assertNull(EditorUiState(previewingLock = true).displayedPreview)
+    }
+
+    @Test
+    fun `retained preview is displayed but never eligible`() {
+        val retained = PublishedPreview(
+            revision = 1L,
+            target = WallpaperTarget.HOME,
+            home = RenderedPreview(testRequest(WallpaperTarget.HOME), homePlan, mockk<Bitmap>(relaxed = true)),
+            lock = null
+        )
+        val state = EditorUiState(publishedPreview = null, retainedPreview = retained)
+
+        assertNotNull("the retained render stays on screen", state.displayedPreview)
+        assertEquals(retained.home.bitmap, state.activeBitmap)
+        assertNull("eligibility is withdrawn once the publication is gone", state.previewBitmap)
+        assertFalse("a retained render must not count as current", state.isPreviewCurrent)
+    }
+
+    @Test
+    fun `latestPublication prefers the current publication over the retained one`() {
+        val retained = PublishedPreview(
+            revision = 1L,
+            target = WallpaperTarget.HOME,
+            home = RenderedPreview(testRequest(WallpaperTarget.HOME), homePlan, mockk<Bitmap>(relaxed = true)),
+            lock = null
+        )
+        val published = retained.copy(revision = 2L)
+        val state = EditorUiState(publishedPreview = published, retainedPreview = retained)
+
+        assertEquals(2L, state.latestPublication?.revision)
     }
 
     private fun stateWithPreview(withLock: Boolean, previewingLock: Boolean): EditorUiState {
         val preview = PublishedPreview(
             revision = 1L,
-            target = WallpaperTarget.HOME,
+            target = if (withLock) WallpaperTarget.BOTH else WallpaperTarget.HOME,
             home = RenderedPreview(testRequest(WallpaperTarget.HOME), homePlan, mockk<Bitmap>(relaxed = true)),
             lock = if (withLock) {
                 RenderedPreview(testRequest(WallpaperTarget.LOCK), lockPlan, mockk<Bitmap>(relaxed = true))

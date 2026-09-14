@@ -47,8 +47,8 @@ private const val focusStep = 0.05f
  * (e.g. a HOME canvas wider than the visible screen). [focusPoint] is expressed
  * in the rendered-bitmap normalized space; the overlay and tap handling convert
  * through [ViewportTransform] so the crosshair aligns with the subject and taps
- * map back to the correct bitmap position. The caller sizes the frame through
- * its modifier (explicit width); height follows [deviceAspectRatio].
+ * map back to the correct bitmap position. The caller owns the frame width;
+ * the height follows [deviceAspectRatio].
  */
 @Composable
 fun DevicePreviewFrame(
@@ -60,20 +60,24 @@ fun DevicePreviewFrame(
 ) {
     val frameShape = RoundedCornerShape(28.dp)
     val haptic = LocalHapticFeedback.current
-    // Keep the latest callback without restarting the tap detector on recomposition.
-    val latestOnFocusTap by rememberUpdatedState(onFocusTap)
     val frameA11y = stringResource(R.string.preview_frame_a11y)
     val emptyText = stringResource(R.string.preview_empty)
+    val centerLabel = stringResource(R.string.a11y_focus_center)
     val moveLeftLabel = stringResource(R.string.a11y_focus_move_left)
     val moveRightLabel = stringResource(R.string.a11y_focus_move_right)
     val moveUpLabel = stringResource(R.string.a11y_focus_move_up)
     val moveDownLabel = stringResource(R.string.a11y_focus_move_down)
 
+    // Long-lived gesture/semantic handlers must observe the latest values without
+    // restarting pointer detection on every recomposition.
+    val currentOnFocusTap by rememberUpdatedState(onFocusTap)
+    val currentFocusPoint by rememberUpdatedState(focusPoint)
+
     // TalkBack-reachable alternative to tap-to-reposition: directional focus
     // moves expressed in the same canvas-normalized space as [focusPoint].
     fun moveFocus(dx: Float, dy: Float): Boolean {
-        val current = focusPoint ?: return false
-        val onFocus = onFocusTap ?: return false
+        val current = currentFocusPoint ?: return false
+        val onFocus = currentOnFocusTap ?: return false
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         onFocus(
             FocusPoint(
@@ -84,12 +88,23 @@ fun DevicePreviewFrame(
         return true
     }
 
-    val focusActions = if (onFocusTap != null) listOf(
-        CustomAccessibilityAction(moveLeftLabel) { moveFocus(-focusStep, 0f) },
-        CustomAccessibilityAction(moveRightLabel) { moveFocus(focusStep, 0f) },
-        CustomAccessibilityAction(moveUpLabel) { moveFocus(0f, -focusStep) },
-        CustomAccessibilityAction(moveDownLabel) { moveFocus(0f, focusStep) }
-    ) else emptyList()
+    fun centerFocus(): Boolean {
+        val onFocus = currentOnFocusTap ?: return false
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        onFocus(FocusPoint(xNormalized = 0.5f, yNormalized = 0.5f))
+        return true
+    }
+
+    val focusActions = if (onFocusTap != null) buildList {
+        if (focusPoint != null) {
+            add(CustomAccessibilityAction(moveLeftLabel) { moveFocus(-focusStep, 0f) })
+            add(CustomAccessibilityAction(moveRightLabel) { moveFocus(focusStep, 0f) })
+            add(CustomAccessibilityAction(moveUpLabel) { moveFocus(0f, -focusStep) })
+            add(CustomAccessibilityAction(moveDownLabel) { moveFocus(0f, focusStep) })
+        }
+        // Establishes an initial focus when none exists, and resets to center otherwise.
+        add(CustomAccessibilityAction(centerLabel) { centerFocus() })
+    } else emptyList()
 
     Box(
         modifier = modifier
@@ -105,8 +120,6 @@ fun DevicePreviewFrame(
             .background(Color(0xFF1A1A1A))
             .then(
                 if (onFocusTap != null)
-                    // Merge descendants so the frame description is announced once
-                    // (the image itself carries no description).
                     Modifier.semantics(mergeDescendants = true) {
                         contentDescription = frameA11y
                         customActions = focusActions
@@ -120,6 +133,8 @@ fun DevicePreviewFrame(
 
             Image(
                 bitmap = bitmap.asImageBitmap(),
+                // Announced once via the merged frame node above — a separate
+                // image description would double the TalkBack announcement.
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -132,6 +147,7 @@ fun DevicePreviewFrame(
                         if (onFocusTap != null)
                             Modifier.pointerInput(bitmap.width, bitmap.height) {
                                 detectTapGestures { offset ->
+                                    val onTap = currentOnFocusTap ?: return@detectTapGestures
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     val point = ViewportTransform.viewportToBitmap(
                                         x = offset.x / size.width,
@@ -139,7 +155,7 @@ fun DevicePreviewFrame(
                                         bitmapAspect = bitmapAspect,
                                         viewportAspect = size.width.toFloat() / size.height.toFloat()
                                     )
-                                    latestOnFocusTap?.invoke(
+                                    onTap(
                                         FocusPoint(
                                             xNormalized = point.x,
                                             yNormalized = point.y
@@ -160,20 +176,21 @@ fun DevicePreviewFrame(
                     val cx = viewportPoint.x * size.width
                     val cy = viewportPoint.y * size.height
                     val center = Offset(cx, cy)
-                    // Density-independent crosshair so it keeps its size across screens.
-                    val ring = 22.dp.toPx()
-                    val dot = 6.dp.toPx()
+                    // Density-scaled so the marker is identical in dp on every screen.
+                    val ring = 11.dp.toPx()
+                    val halo = ring + 3.dp.toPx()
+                    val dot = 2.5.dp.toPx()
 
                     drawCircle(
-                        color = Color.Black.copy(alpha = 0.35f),
-                        radius = ring + dot,
+                        color = Color.Black.copy(alpha = 0.45f),
+                        radius = halo,
                         center = center
                     )
                     drawCircle(
                         color = Color.White,
                         radius = ring,
                         center = center,
-                        style = Stroke(width = 2.5.dp.toPx())
+                        style = Stroke(width = 1.5.dp.toPx())
                     )
                     drawCircle(
                         color = Color.White,
@@ -185,7 +202,7 @@ fun DevicePreviewFrame(
         } else {
             Text(
                 text = emptyText,
-                color = Color.White.copy(alpha = 0.8f),
+                color = Color(0xFF666666),
                 style = MaterialTheme.typography.bodySmall
             )
         }
