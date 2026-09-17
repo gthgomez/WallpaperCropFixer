@@ -102,21 +102,40 @@ class EditorViewModel @Inject constructor(
 
         viewModelScope.launch {
             val settings = runCatching { settingsRepository.observeSettings().first() }.getOrDefault(UserSettings())
-            // SavedStateHandle (an in-session change) wins over DataStore defaults.
-            _uiState.update { current ->
-                current.copy(
-                    cropMode = savedStateHandle.get<String>(KEY_CROP_MODE)
-                        ?.let { runCatching { CropMode.valueOf(it) }.getOrNull() }
-                        ?: settings.defaultCropMode,
-                    wallpaperTarget = savedStateHandle.get<String>(KEY_TARGET)
-                        ?.let { runCatching { WallpaperTarget.valueOf(it) }.getOrNull() }
-                        ?: settings.defaultWallpaperTarget,
-                    backgroundFillMode = savedStateHandle.get<String>(KEY_FILL_MODE)
-                        ?.let { runCatching { BackgroundFillMode.valueOf(it) }.getOrNull() }
-                        ?: settings.defaultBackgroundFillMode,
-                    faceAwareEnabled = savedStateHandle.get<Boolean>(KEY_FACE_AWARE)
-                        ?: settings.defaultFaceAwareEnabled
+            val current = _uiState.value
+            val initialMode = current.cropMode
+            val initialTarget = current.wallpaperTarget
+            val initialFill = current.backgroundFillMode
+            val initialFace = current.faceAwareEnabled
+
+            val newMode = savedStateHandle.get<String>(KEY_CROP_MODE)
+                ?.let { runCatching { CropMode.valueOf(it) }.getOrNull() }
+                ?: settings.defaultCropMode
+            val newTarget = savedStateHandle.get<String>(KEY_TARGET)
+                ?.let { runCatching { WallpaperTarget.valueOf(it) }.getOrNull() }
+                ?: settings.defaultWallpaperTarget
+            val newFill = savedStateHandle.get<String>(KEY_FILL_MODE)
+                ?.let { runCatching { BackgroundFillMode.valueOf(it) }.getOrNull() }
+                ?: settings.defaultBackgroundFillMode
+            val newFace = savedStateHandle.get<Boolean>(KEY_FACE_AWARE)
+                ?: settings.defaultFaceAwareEnabled
+
+            val optionsChanged = newMode != initialMode || newTarget != initialTarget ||
+                    newFill != initialFill || newFace != initialFace
+
+            _uiState.update {
+                it.copy(
+                    cropMode = newMode,
+                    wallpaperTarget = newTarget,
+                    backgroundFillMode = newFill,
+                    faceAwareEnabled = newFace
                 )
+            }
+
+            // If defaults changed after an image was already loaded/rendered, trigger re-render
+            if (optionsChanged && _uiState.value.sourceImageMeta != null) {
+                invalidatePublishedPreview()
+                generatePreview()
             }
         }
     }
@@ -130,6 +149,12 @@ class EditorViewModel @Inject constructor(
             ?.let { mode -> _uiState.update { it.copy(backgroundFillMode = mode) } }
         savedStateHandle.get<Boolean>(KEY_FACE_AWARE)?.let { enabled ->
             _uiState.update { it.copy(faceAwareEnabled = enabled) }
+        }
+        val focusX = savedStateHandle.get<Float>(KEY_FOCUS_X)
+        val focusY = savedStateHandle.get<Float>(KEY_FOCUS_Y)
+        if (focusX != null && focusY != null) {
+            val restoredFocus = com.wallpapercropfixer.domain.model.FocusPoint(focusX, focusY)
+            _uiState.update { it.copy(manualFocusPoint = restoredFocus) }
         }
     }
 
@@ -289,6 +314,13 @@ class EditorViewModel @Inject constructor(
         invalidatePublishedPreview()
         _uiState.update { it.copy(manualFocusPoint = point, faceAwareEnabled = false) }
         savedStateHandle[KEY_FACE_AWARE] = false
+        if (point != null) {
+            savedStateHandle[KEY_FOCUS_X] = point.xNormalized
+            savedStateHandle[KEY_FOCUS_Y] = point.yNormalized
+        } else {
+            savedStateHandle.remove<Float>(KEY_FOCUS_X)
+            savedStateHandle.remove<Float>(KEY_FOCUS_Y)
+        }
         generatePreview()
     }
 
@@ -305,6 +337,8 @@ class EditorViewModel @Inject constructor(
             savedStateHandle[KEY_TARGET] = settings.defaultWallpaperTarget.name
             savedStateHandle[KEY_FILL_MODE] = settings.defaultBackgroundFillMode.name
             savedStateHandle[KEY_FACE_AWARE] = settings.defaultFaceAwareEnabled
+            savedStateHandle.remove<Float>(KEY_FOCUS_X)
+            savedStateHandle.remove<Float>(KEY_FOCUS_Y)
             _uiState.update {
                 it.copy(
                     cropMode = settings.defaultCropMode,
@@ -648,5 +682,7 @@ class EditorViewModel @Inject constructor(
         private const val KEY_TARGET = "editor_target"
         private const val KEY_FILL_MODE = "editor_fill_mode"
         private const val KEY_FACE_AWARE = "editor_face_aware"
+        private const val KEY_FOCUS_X = "editor_focus_x"
+        private const val KEY_FOCUS_Y = "editor_focus_y"
     }
 }

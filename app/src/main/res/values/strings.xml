@@ -22,6 +22,8 @@
     <!-- Editor screen -->
     <string name="editor_title">Make it fit</string>
     <string name="editor_reset_defaults">Reset to defaults</string>
+    <string name="editor_clean_preview">Clean preview</string>
+    <string name="editor_exit_clean_preview">Exit clean preview</string>
     <string name="editor_loading_photo">Loading photo…</string>
     <string name="editor_viewing">Viewing</string>
     <string name="preview_screen_home">Home</string>

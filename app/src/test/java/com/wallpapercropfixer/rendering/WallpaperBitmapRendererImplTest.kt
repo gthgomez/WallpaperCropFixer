@@ -128,4 +128,35 @@ class WallpaperBitmapRendererImplTest {
         val (w2, h2) = renderer.decodeMaxDimensions(1188, 2400)
         assertTrue(w2.toLong() * h2 <= WallpaperBitmapRendererImpl.MAX_DECODE_PIXELS)
     }
+
+    /**
+     * Tier 3 Composition Test:
+     * Foreground crop geometry and placement must be invariant to background finish mode.
+     */
+    @Test
+    fun `foreground crop plan geometry is identical across blur, solid, and gradient`() {
+        val device = DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
+        val behavior = WallpaperBehaviorProfile("generic", "generic", 1.1f, 1.0f)
+        val meta = SourceImageMeta("file:///dummy", 1600, 1200, "image/jpeg")
+        val engine = WallpaperCropEngineImpl(TargetCanvasSpecFactory(), FocusPointResolver(), CropStrategySelector())
+
+        val planBlur = engine.buildPlan(
+            WallpaperRenderRequest(meta, device, behavior, WallpaperTarget.HOME, CropMode.SAFE_FIT, BackgroundFillMode.BLUR, null, false),
+            null
+        )
+        val planSolid = engine.buildPlan(
+            WallpaperRenderRequest(meta, device, behavior, WallpaperTarget.HOME, CropMode.SAFE_FIT, BackgroundFillMode.SOLID, null, false),
+            null
+        )
+        val planGrad = engine.buildPlan(
+            WallpaperRenderRequest(meta, device, behavior, WallpaperTarget.HOME, CropMode.SAFE_FIT, BackgroundFillMode.GRADIENT, null, false),
+            null
+        )
+
+        assertEquals(planBlur.sourceCropRect, planSolid.sourceCropRect)
+        assertEquals(planBlur.sourceCropRect, planGrad.sourceCropRect)
+
+        assertEquals(planBlur.outputImagePlacement, planSolid.outputImagePlacement)
+        assertEquals(planBlur.outputImagePlacement, planGrad.outputImagePlacement)
+    }
 }

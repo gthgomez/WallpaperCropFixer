@@ -7,13 +7,17 @@ import javax.inject.Inject
 
 class CropStrategySelector @Inject constructor() {
 
+    companion object {
+        /** Maximum area fraction of source image allowed to be cropped in BALANCED mode. */
+        const val BALANCED_MAX_CROP_FRACTION = 0.35f
+    }
+
     /**
-     * Determines whether the given [cropRemovalFraction] or clipped faces should trigger padding
-     * for the specified [cropMode].
+     * Determines whether padding should be used.
      *
-     * SAFE_FIT: pad when removal > threshold or when detected faces would be clipped
-     * BALANCED: pad when removal > 2× threshold
-     * FILL: never pad
+     * - SAFE_FIT: Always pads when aspect ratio differs, guaranteeing whole photo preservation.
+     * - BALANCED: Pads if standard crop removal exceeds the 35% crop budget OR if faces are clipped.
+     * - FILL: Never pads (fills screen).
      */
     fun shouldUsePadding(
         cropMode: CropMode,
@@ -21,16 +25,20 @@ class CropStrategySelector @Inject constructor() {
         hasClippedFaces: Boolean = false
     ): Boolean {
         return when (cropMode) {
-            CropMode.SAFE_FIT -> (cropRemovalFraction > CropMath.SAFE_FIT_PADDING_THRESHOLD) || hasClippedFaces
-            CropMode.BALANCED -> cropRemovalFraction > CropMath.SAFE_FIT_PADDING_THRESHOLD * 2f
+            CropMode.SAFE_FIT -> cropRemovalFraction > 0.001f || hasClippedFaces
+            CropMode.BALANCED -> (cropRemovalFraction > BALANCED_MAX_CROP_FRACTION) || hasClippedFaces
             CropMode.FILL -> false
         }
     }
 
     /**
-     * For SAFE_FIT with padding, return the full source crop rect so the entire photograph
-     * is preserved and padded on the canvas.
-     * For other modes, return the standard crop rect.
+     * Selects the source crop rectangle to be drawn.
+     *
+     * - SAFE_FIT: With padding, returns [fullSourceRect] so 100% of source pixels are preserved.
+     * - BALANCED: When padding is requested, shrinks crop to [fullSourceRect] (or partial bounds)
+     *   so that background padding is actually exposed, rather than fitting a same-aspect crop
+     *   that fills 100% of the canvas.
+     * - FILL: Always returns [standardCropRect].
      */
     fun selectCropRect(
         cropMode: CropMode,
@@ -38,10 +46,15 @@ class CropStrategySelector @Inject constructor() {
         fullSourceRect: CropRect,
         usePadding: Boolean
     ): CropRect {
-        return if (usePadding && cropMode == CropMode.SAFE_FIT) {
-            fullSourceRect
+        return if (usePadding) {
+            when (cropMode) {
+                CropMode.SAFE_FIT -> fullSourceRect
+                CropMode.BALANCED -> fullSourceRect
+                CropMode.FILL -> standardCropRect
+            }
         } else {
             standardCropRect
         }
     }
 }
+

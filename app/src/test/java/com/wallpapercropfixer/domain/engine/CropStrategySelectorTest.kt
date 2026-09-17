@@ -10,24 +10,25 @@ class CropStrategySelectorTest {
     private val selector = CropStrategySelector()
 
     @Test
-    fun `SAFE_FIT pads when removal exceeds threshold`() {
+    fun `SAFE_FIT pads when removal is non-zero to guarantee whole photo preservation`() {
         assertTrue(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.25f))
+        assertTrue(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.05f))
     }
 
     @Test
-    fun `SAFE_FIT does not pad when removal is below threshold`() {
-        assertFalse(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.10f))
+    fun `SAFE_FIT does not pad when removal is zero`() {
+        assertFalse(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.0f))
     }
 
     @Test
-    fun `BALANCED pads only when removal exceeds double threshold`() {
+    fun `BALANCED pads when removal exceeds 35 percent crop budget`() {
         assertFalse(selector.shouldUsePadding(CropMode.BALANCED, 0.25f))
-        assertTrue(selector.shouldUsePadding(CropMode.BALANCED, 0.45f))
+        assertTrue(selector.shouldUsePadding(CropMode.BALANCED, 0.36f))
     }
 
     @Test
-    fun `SAFE_FIT pads when faces are clipped even if removal is low`() {
-        assertTrue(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.05f, hasClippedFaces = true))
+    fun `SAFE_FIT pads when faces are clipped even if removal is zero`() {
+        assertTrue(selector.shouldUsePadding(CropMode.SAFE_FIT, 0.0f, hasClippedFaces = true))
     }
 
     @Test
