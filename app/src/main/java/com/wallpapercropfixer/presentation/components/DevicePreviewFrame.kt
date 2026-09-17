@@ -56,6 +56,7 @@ fun DevicePreviewFrame(
     modifier: Modifier = Modifier,
     deviceAspectRatio: Float = 9f / 19f,
     focusPoint: FocusPoint? = null,
+    showFocusMarker: Boolean = true,
     onFocusTap: ((FocusPoint) -> Unit)? = null
 ) {
     val frameShape = RoundedCornerShape(28.dp)
@@ -166,13 +167,14 @@ fun DevicePreviewFrame(
                         else Modifier
                     )
             ) {
-                focusPoint?.let { fp ->
-                    val viewportPoint = ViewportTransform.bitmapToViewport(
-                        x = fp.xNormalized,
-                        y = fp.yNormalized,
-                        bitmapAspect = bitmapAspect,
-                        viewportAspect = size.width / size.height
-                    )
+                if (showFocusMarker) {
+                    focusPoint?.let { fp ->
+                        val viewportPoint = ViewportTransform.bitmapToViewport(
+                            x = fp.xNormalized,
+                            y = fp.yNormalized,
+                            bitmapAspect = bitmapAspect,
+                            viewportAspect = size.width / size.height
+                        )
                     val cx = viewportPoint.x * size.width
                     val cy = viewportPoint.y * size.height
                     val center = Offset(cx, cy)
@@ -199,6 +201,7 @@ fun DevicePreviewFrame(
                     )
                 }
             }
+        }
         } else {
             Text(
                 text = emptyText,

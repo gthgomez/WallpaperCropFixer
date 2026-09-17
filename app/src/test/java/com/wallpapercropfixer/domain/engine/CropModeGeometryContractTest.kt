@@ -75,16 +75,15 @@ class CropModeGeometryContractTest {
     }
 
     @Test
-    fun `SAFE_FIT still crops when the standard crop removes only a little of the source`() {
-        // 950x2000 into a 1:2 canvas: the focus-biased crop is 950x1900, removing ~5%.
-        // Below the 20% threshold SAFE_FIT keeps the crop — it does not pad.
+    fun `SAFE_FIT preserves the full photo and pads when aspect ratio differs`() {
+        // 950x2000 into a 1:2 (1000x2000) canvas: aspect differs slightly.
+        // Under the strict Fit contract, SAFE_FIT preserves the full 950x2000 photo and pads.
         val plan = engine.buildPlan(request(950, 2000, CropMode.SAFE_FIT), null)
 
-        assertFalse("5% removal is below the 20% threshold; SAFE_FIT must crop", plan.usePadding)
-        assertTrue(
-            "the photo itself is cropped (crop height < source height)",
-            plan.sourceCropRect.height < 2000f
-        )
+        assertTrue("SAFE_FIT must pad when aspect ratio differs to guarantee no cuts", plan.usePadding)
+        assertEquals(950f, plan.sourceCropRect.width, 0.5f)
+        assertEquals(2000f, plan.sourceCropRect.height, 0.5f)
+        assertTrue("padded placement must leave background exposed", placementCoverage(plan) < 1f)
     }
 
     @Test
@@ -99,18 +98,15 @@ class CropModeGeometryContractTest {
     }
 
     @Test
-    fun `BALANCED same-aspect padding occupies the whole canvas leaving no visible background`() {
+    fun `BALANCED pads and exposes background when removal exceeds crop budget`() {
         // 4000x3000 into a 1:2 canvas: standard crop is 1500x3000 (1:2), removal ~62.5%
-        // is above BALANCED's 40% threshold, so usePadding flips on. But the crop rect
-        // already matches the canvas aspect, so the padded placement fits the full canvas.
+        // is above BALANCED's 35% threshold. BALANCED must pad and actually expose background.
         val plan = engine.buildPlan(request(4000, 3000, CropMode.BALANCED), null)
 
-        assertTrue("BALANCED must request padding above 40% removal", plan.usePadding)
-        assertEquals(
-            "same-aspect padded placement must cover the entire canvas",
-            1f,
-            placementCoverage(plan),
-            0.0001f
+        assertTrue("BALANCED must request padding above crop budget", plan.usePadding)
+        assertTrue(
+            "BALANCED padding must actually leave background exposed (< 100% canvas coverage)",
+            placementCoverage(plan) < 1f
         )
     }
 

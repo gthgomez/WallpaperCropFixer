@@ -47,7 +47,9 @@ class AndroidWallpaperApplyRepository @Inject constructor(
                 WallpaperTarget.LOCK -> WallpaperManager.FLAG_LOCK
                 WallpaperTarget.BOTH -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             }
-            val resultId = wallpaperManager.setBitmap(bitmap, null, true, flag)
+            // allowBackup = false prevents the system from silently backing up wallpaper images
+            // to Google cloud backups, matching our privacy commitment.
+            val resultId = wallpaperManager.setBitmap(bitmap, null, false, flag)
             if (resultId <= 0) {
                 throw WallpaperSetFailedException("WallpaperManager returned failure code $resultId")
             }

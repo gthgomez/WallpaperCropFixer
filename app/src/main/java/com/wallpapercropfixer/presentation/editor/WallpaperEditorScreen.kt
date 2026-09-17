@@ -53,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -179,12 +180,13 @@ internal fun EditorContent(
 ) {
     val haptic = LocalHapticFeedback.current
     val view = LocalView.current
+    var isCleanPreview by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (state.latestPublication != null && !state.isLoading) {
+            if (state.latestPublication != null && !state.isLoading && !isCleanPreview) {
                 EditorBottomBar(state = state, callbacks = callbacks, haptic = haptic, view = view)
             }
         }
@@ -195,10 +197,12 @@ internal fun EditorContent(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Bound the preview by the height actually available after chrome so it
-            // never grows taller than the viewport on tablets or short windows.
             val availableWidth = maxWidth
-            val previewMaxHeight = (maxHeight * 0.42f).coerceIn(240.dp, 500.dp)
+            val previewMaxHeight = if (isCleanPreview) {
+                (maxHeight * 0.75f).coerceIn(300.dp, 750.dp)
+            } else {
+                (maxHeight * 0.42f).coerceIn(240.dp, 500.dp)
+            }
 
             if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -224,9 +228,14 @@ internal fun EditorContent(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                EditorTopBar(state, callbacks)
+                EditorTopBar(
+                    state = state,
+                    callbacks = callbacks,
+                    isCleanPreview = isCleanPreview,
+                    onToggleCleanPreview = { isCleanPreview = !isCleanPreview }
+                )
 
-                if (state.latestPublication?.lock != null) {
+                if (state.latestPublication?.lock != null && !isCleanPreview) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -247,9 +256,16 @@ internal fun EditorContent(
                     }
                 }
 
-                PreviewStage(state, callbacks, availableWidth, previewMaxHeight)
+                PreviewStage(
+                    state = state,
+                    callbacks = callbacks,
+                    availableWidth = availableWidth,
+                    previewMaxHeight = previewMaxHeight,
+                    isCleanPreview = isCleanPreview
+                )
 
-                StatusRow(state, callbacks)
+                if (!isCleanPreview) {
+                    StatusRow(state, callbacks)
 
                 if (state.activeBitmap != null) {
                     Spacer(Modifier.height(4.dp))
@@ -296,18 +312,24 @@ internal fun EditorContent(
                     }
                 }
 
-                Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                ControlsCard(state, callbacks)
+                    ControlsCard(state, callbacks)
 
-                Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EditorTopBar(state: EditorUiState, callbacks: EditorCallbacks) {
+private fun EditorTopBar(
+    state: EditorUiState,
+    callbacks: EditorCallbacks,
+    isCleanPreview: Boolean,
+    onToggleCleanPreview: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -327,6 +349,21 @@ private fun EditorTopBar(state: EditorUiState, callbacks: EditorCallbacks) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
+        if (state.activeBitmap != null) {
+            IconButton(onClick = onToggleCleanPreview) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = stringResource(
+                        if (isCleanPreview) R.string.editor_exit_clean_preview else R.string.editor_clean_preview
+                    ),
+                    tint = if (isCleanPreview) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
         IconButton(onClick = callbacks.onReset, enabled = state.sourceImageMeta != null) {
             Icon(
                 Icons.Default.RestartAlt,
@@ -346,7 +383,8 @@ private fun PreviewStage(
     state: EditorUiState,
     callbacks: EditorCallbacks,
     availableWidth: androidx.compose.ui.unit.Dp,
-    previewMaxHeight: androidx.compose.ui.unit.Dp
+    previewMaxHeight: androidx.compose.ui.unit.Dp,
+    isCleanPreview: Boolean = false
 ) {
     val stageWidth = minOf(
         availableWidth * 0.72f,
@@ -366,8 +404,10 @@ private fun PreviewStage(
                 // focus — never from live editor state, so a stale image is never
                 // paired with newer geometry.
                 focusPoint = canvasFocusFor(displayed),
+                // Hide the focus reticle in clean preview mode
+                showFocusMarker = !isCleanPreview,
                 // Focus editing requires a current (not retained) render.
-                onFocusTap = if (state.isPreviewCurrent && !state.isBusy) {
+                onFocusTap = if (state.isPreviewCurrent && !state.isBusy && !isCleanPreview) {
                     { tapped -> callbacks.onFocusTap(sourceFocusForTap(state, tapped)) }
                 } else null,
                 modifier = Modifier.width(stageWidth)
