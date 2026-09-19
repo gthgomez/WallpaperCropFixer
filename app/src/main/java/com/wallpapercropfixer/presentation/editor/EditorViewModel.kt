@@ -180,7 +180,13 @@ class EditorViewModel @Inject constructor(
         previewGeneration.incrementAndGet()
         ++applyOperationToken
         ++exportOperationToken
-        configurationRefreshFailed = false
+        synchronized(configurationRefreshLock) {
+            // A refresh for the previous image may still be suspended in a
+            // repository lookup. Its result must not affect the new image.
+            pendingConfigurationRefresh = false
+            configurationRefreshInFlight = false
+            configurationRefreshFailed = false
+        }
         previewJob?.cancel()
         loadJob?.cancel()
 
@@ -359,11 +365,14 @@ class EditorViewModel @Inject constructor(
             configurationRefreshFailed = false
             invalidatePublishedPreview()
         }
-        startConfigurationRefresh()
+        startConfigurationRefresh(loadGeneration)
     }
 
     /** Starts a configuration refresh after its publication gate has been closed. */
-    private fun startConfigurationRefresh(preserveOutcome: Boolean = false) {
+    private fun startConfigurationRefresh(
+        loadGenerationAtStart: Int,
+        preserveOutcome: Boolean = false
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val deviceProfile = getDeviceProfile()
@@ -371,7 +380,10 @@ class EditorViewModel @Inject constructor(
                 var requery = false
                 withContext(Dispatchers.Main.immediate) {
                     synchronized(configurationRefreshLock) {
-                        if (_uiState.value.isCommitting) {
+                        if (loadGenerationAtStart != loadGeneration) {
+                            // A newer image owns the state now; discard this
+                            // refresh without touching its publication gates.
+                        } else if (_uiState.value.isCommitting) {
                             pendingConfigurationRefresh = true
                             configurationRefreshInFlight = false
                         } else if (pendingConfigurationRefresh) {
@@ -387,11 +399,15 @@ class EditorViewModel @Inject constructor(
                         }
                     }
                 }
-                if (requery) startConfigurationRefresh(preserveOutcome)
+                if (requery && loadGenerationAtStart == loadGeneration) {
+                    startConfigurationRefresh(loadGenerationAtStart, preserveOutcome)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                if (loadGenerationAtStart != loadGeneration) return@launch
                 synchronized(configurationRefreshLock) {
+                    if (loadGenerationAtStart != loadGeneration) return@synchronized
                     pendingConfigurationRefresh = false
                     configurationRefreshInFlight = false
                     configurationRefreshFailed = true
@@ -727,7 +743,7 @@ class EditorViewModel @Inject constructor(
             }
             pendingConfigurationRefresh = false
         }
-        if (refreshQueued) startConfigurationRefresh(preserveOutcome = true)
+        if (refreshQueued) startConfigurationRefresh(loadGeneration, preserveOutcome = true)
     }
 
     private fun finishApply(
@@ -762,7 +778,7 @@ class EditorViewModel @Inject constructor(
             }
             pendingConfigurationRefresh = false
         }
-        if (refreshQueued) startConfigurationRefresh(preserveOutcome = true)
+        if (refreshQueued) startConfigurationRefresh(loadGeneration, preserveOutcome = true)
     }
 
     private fun appliedRes(target: WallpaperTarget): Int = when (target) {

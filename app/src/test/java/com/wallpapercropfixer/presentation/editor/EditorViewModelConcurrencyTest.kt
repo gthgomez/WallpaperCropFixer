@@ -126,6 +126,43 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
+    fun `configuration refresh for A cannot publish metrics or failure after B loads`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+
+        vm.loadImage("A")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.refreshForConfigurationChange()
+        waitForCondition { deviceRepository.calls >= 2 }
+        // The suspended refresh is call 2. It fails after B has taken ownership.
+        deviceRepository.failuresAtCall += 2
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        vm.loadImage("B")
+        waitForCondition { deviceRepository.calls >= 3 && vm.uiState.value.imageUri == "B" }
+        deviceRepository.gate!!.complete(Unit)
+
+        waitForCondition {
+            vm.uiState.value.imageUri == "B" &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
+        assertFalse("stale refresh failure must not poison the new image", vm.uiState.value.renderFailed)
+    }
+
+    @Test
     fun `cancellation of a suspended render does not surface as an error`() {
         val renderer = SuspendingRenderer()
         val vm = buildEditorViewModel(renderer = renderer)
