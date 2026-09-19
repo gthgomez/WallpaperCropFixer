@@ -40,11 +40,11 @@ Guardrails honored: no superlatives ("perfectly", "best"), no unverifiable optim
 
 | # | Screen shown | Headline (on-image) | Supporting copy | Benefit |
 |---|---|---|---|---|
-| 1 | Main preview: photo on phone-shaped frame | **See it before you set it** | The frame shows the real crop your wallpaper will get | No more surprises after Apply |
-| 2 | Preview with a tap reticle moved off-center, face in frame | **Keep what matters in frame** | Tap anywhere to move the focus; face-aware framing starts you off | Your subject survives the crop |
+| 1 | Main preview: photo on phone-shaped frame | **See it before you set it** | Compare the rendered framing before applying; launcher framing may vary | No more surprises after Apply |
+| 2 | Preview with a tap reticle moved off-center, face in frame | **Keep what matters in frame** | Tap anywhere to move the focus; face-aware framing starts you off | Adjust subject placement |
 | 3 | Target selector with Home / Lock / Both + per-surface toggle | **Home, Lock, or Both** | Preview each surface, then set one or both | One app for both screens |
-| 4 | Crop-mode segmented control (Safe Fit / Balanced / Fill), letterbox visible | **Fit it your way** | Letterbox when you want it, fill when you don't — padding filled with a blurred version of your photo | Control over how much of the photo shows |
-| 5 | Success state after Apply | **Private by design** | Photos stay on your device. No ads. No tracking. One permission. | Trust built into the flow |
+| 4 | Crop-mode segmented control (Safe Fit / Balanced / Fill), letterbox visible | **Fit it your way** | Letterbox when you want it, fill when you don't — choose Blur, Color or Gradient for visible background | Control over how much of the photo shows |
+| 5 | Success state after Apply | **Private by design** | Photos processed on-device. No ads. SDK diagnostics disclosed in the privacy policy. | Trust built into the flow |
 
 Rules: device-frame screenshots captured on Galaxy S25 Ultra (primary certification device); no UI elements from unreleased features; text on images ≥ readable at thumbnail size.
 
@@ -54,6 +54,6 @@ Rules: device-frame screenshots captured on Galaxy S25 Ultra (primary certificat
 - **What to avoid:** promotional badges ("FREE!"), stars, awards, device buttons, or anything resembling Play UI.
 
 ## 6. Contact fields
-- Email: OWNER_MUST_CONFIRM (personal gmail placeholder in repo docs must be replaced).
+- Email: OWNER_MUST_CONFIRM (supply the real public support address).
 - Website: `https://github.com/gthgomez/WallpaperCropFixer` (public repo) or the Pages site (live).
 - Privacy policy URL: `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` (live, verified 2026-09-05).

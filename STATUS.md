@@ -1,7 +1,7 @@
 # WallpaperCropFixer Status
 
 **Updated:** 2026-09-19
-**State:** Post-RC1 main; RC2 implementation and certification in progress. No RC2 tag.
+**State:** Post-RC1 main; integrated RC2 candidate code gates PASS, physical and Play gates pending. No RC2 tag.
 **Starting main:** `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc` (live main checked at campaign start).
 Historical RC1 results do not certify current source. See the release readiness report for the candidate record and `QA_CHECKLIST.md` for pending physical/Play gates.
 
@@ -31,10 +31,10 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 ## In Progress / Remaining (non-code)
 
-- **Physical-device QA matrix** (Samsung One UI, Pixel, API 26–28 legacy storage) — see QA_CHECKLIST.md.
+- **Physical-device QA matrix** (Samsung One UI, Pixel, API 26–28 legacy storage) — see QA_CHECKLIST.md; not executed for this candidate.
 - **Public privacy URL:** deployment was recorded successful on 2026-09-05; recheck reachability and updated content before submission.
 - **Public developer/entity and privacy contact** must replace explicit owner fields in `PRIVACY.md`.
-- **Play Console Data Safety form** based on the PRIVACY.md worksheet (OWNER ACTION).
+- **Play Console Data Safety form** based on the PRIVACY.md worksheet (OWNER ACTION; not submitted).
 - **Upload-key signing / Play App Signing** configuration (OWNER ACTION; env-var signing is wired in `app/build.gradle.kts`).
 - Closed testing (12+ testers / 14 days) and production access application.
 
@@ -42,9 +42,15 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 Branch protection was configured during the RC2 campaign to require `Build, lint, and unit tests`, `Dependency declaration policy`, and `Secrets scan`, including administrator enforcement and pull requests. Candidate readiness still requires CI on the exact reviewed head.
 
+## Integrated candidate evidence
+
+- Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (embedded in the certified artifacts). Later certification commits change release records only; they do not change artifact source provenance.
+- Final matrix: lintDebug, lintReleaseVerification, 112 unit tests, assembleDebug, assembleReleaseVerification and bundleReleaseVerification all PASS.
+- Pinned release preflight: PASS with expected owner/device action lines; artifact hashes and paths are recorded in the release readiness report.
+
 ## Blockers
 
-- RC2 code/release gates remain pending until the integrated candidate is tested. Public identity/contact, physical QA, privacy traffic, secure signing and Play actions remain owner/device gates.
+- Public identity/contact, physical QA, privacy traffic, secure signing and Play actions remain owner/device gates.
 
 ## Verification
 

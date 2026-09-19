@@ -7,14 +7,15 @@ Physical-device certification uses the condensed runbook in
 `docs/release/DEVICE_QA_RUNBOOK.md`; Play Console steps live in
 `docs/release/PLAY_SUBMISSION_CHECKLIST.md`.
 
-## RC2 automated candidate — pending
+## RC2 automated candidate — PASS (source candidate `6fc6972`)
 
-Record candidate SHA, test count, lint reports, artifact paths/SHA-256 and preflight result in the release readiness report after integration. Run the full matrix once on that candidate. No historical check below certifies RC2.
+The artifacts embed source candidate `6fc6972a151a97d59dabcb20f02868ac1e151ca0`. The later documentation-only certification commit records these facts and is not the artifact source. No historical check below certifies RC2.
 
-- [ ] `:app:lintDebug :app:lintReleaseVerification :app:testDebugUnitTest :app:assembleDebug :app:assembleReleaseVerification :app:bundleReleaseVerification --no-daemon --stacktrace`
-- [ ] Pinned-tool `tools/release-preflight.ps1` on those artifacts.
+- [x] `:app:lintDebug :app:lintReleaseVerification :app:testDebugUnitTest :app:assembleDebug :app:assembleReleaseVerification :app:bundleReleaseVerification --no-daemon --stacktrace` — PASS; 112 tests, 0 failures, 0 errors, 0 skipped.
+- [x] Pinned-tool `tools/release-preflight.ps1` on those artifacts — PASS; authoritative report is `build/reports/release-preflight.txt` from the invocation using the actual Android SDK path. A prior stale-`ANDROID_HOME` discovery failure is superseded.
+- [x] Candidate SHA, test count, lint reports, artifact paths/SHA-256 and preflight result are recorded in the release readiness report.
+- [x] Automated behavior coverage includes cancellable render navigation, committed Save/Apply navigation blocking and progress ownership, rapid face-aware toggles, partial BOTH export, background availability and Color output.
 - [ ] Record Settings version/code/source for every physical-device session; screenshots from unknown builds are observations, not current-source proof.
-- [ ] Verify cancellable render navigation, committed Save/Apply navigation blocking and progress ownership; rapid face-aware toggles; partial BOTH export; background availability and Color output.
 
 ## Historical RC1 automated record — 2026-09-05
 
@@ -42,7 +43,7 @@ Minimum matrix:
 
 | Device class | Required checks |
 |---|---|
-| Modern Android 15/16-class phone | Photo Picker, EXIF-rotated image, face/no-face/multi-face, Safe Fit/Balanced/Fill, blur/gradient/solid, HOME/LOCK/BOTH, Save, Apply, rotation, large and very large photos, HEIC |
+| Modern Android 15/16-class phone | Photo Picker, EXIF-rotated image, face/no-face/multi-face, Safe Fit/Balanced/Fill, Blur/Gradient/Color, HOME/LOCK/BOTH, Save, Apply, rotation, large and very large photos, HEIC |
 | Legacy API 26–28 device | Picker without storage permission, rendering, Apply where supported, Save to app-specific external folder and truthful message |
 | Samsung One UI | HOME/LOCK/BOTH wallpaper behavior, launcher crop/zoom/parallax, face-aware framing |
 | Google Pixel | HOME/LOCK/BOTH behavior, launcher crop/zoom/parallax, face-aware framing |
