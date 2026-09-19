@@ -80,7 +80,7 @@ class WallpaperBitmapRendererImpl @Inject constructor(
         when (fillMode) {
             BackgroundFillMode.BLUR -> blurBackgroundRenderer.renderBackground(canvas, source, canvasW, canvasH)
             BackgroundFillMode.GRADIENT -> gradientBackgroundRenderer.renderBackground(canvas, canvasW, canvasH, source)
-            BackgroundFillMode.SOLID -> canvas.drawColor(Color.BLACK)
+            BackgroundFillMode.SOLID -> canvas.drawColor(ImageEdgeColorSampler.sample(source))
         }
     }
 
