@@ -143,7 +143,7 @@ class CropModeGeometryContractTest {
 
     @Test
     fun `Balanced expands toward edge faces without exceeding removal budget`() {
-        for ((w, h) in listOf(4000 to 3000, 2000 to 4000)) {
+        for ((w, h) in listOf(4000 to 3000, 2000 to 6000)) {
             val faces = listOf(FaceBounds(0f, 0f, 100f, 100f),
                 FaceBounds(w - 100f, h - 100f, w.toFloat(), h.toFloat()))
             val plan = engine.buildPlan(
@@ -198,5 +198,20 @@ class CropModeGeometryContractTest {
             assertTrue(crop.right <= w + 0.01f && crop.bottom <= h + 0.01f)
             assertTrue(crop.width > 0f && crop.height > 0f)
         }
+    }
+    @Test
+    fun `Balanced expands a vertical crop for a portrait edge face while retaining partial framing`() {
+        val face = FaceBounds(800f, 5600f, 1200f, 5900f)
+        val plan = engine.buildPlan(
+            request(2000, 6000, CropMode.BALANCED).copy(enableFaceAwareFocus = true,
+                manualFocusPoint = FocusPoint(0.5f, 0.5f)),
+            SubjectAnalysis(listOf(face), null)
+        )
+        // Standard vertical crop ends at y=5000; the face requires expansion.
+        assertTrue(plan.sourceCropRect.bottom >= face.bottom)
+        assertTrue(plan.sourceCropRect.top > 0f)
+        assertTrue(plan.sourceCropRect.height < 6000f)
+        assertTrue(CropMath.cropRemovalFraction(2000, 6000, plan.sourceCropRect) <= 0.35001f)
+        assertTrue(plan.usePadding)
     }
 }
