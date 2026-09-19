@@ -1,5 +1,7 @@
 # PLAY_SUBMISSION_CHECKLIST.md — WallpaperCropFixer (com.wallpapercropfixer, v1.0 / versionCode 1)
 
+RC2 preparation: device and Console checks remain pending; historical requirement checks below retain their stated dates.
+
 Ordered checklist from "app entry created" to "submitted for review".
 Labels: **VERIFIED_CURRENT_GOOGLE_REQUIREMENT** (checked 2026-09-05, source cited) · **REPOSITORY_DERIVED_ANSWER** (from code audit) · **OWNER_MUST_CONFIRM**.
 
@@ -30,7 +32,7 @@ Fields:
 - ▨ **Privacy policy**: `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` — required for all apps (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9859455).
 - ▨ **Ads**: "No, my app does not contain ads" (REPOSITORY_DERIVED_ANSWER — no ad SDKs in code).
 - ▨ **In-app purchases**: none — free utility, no Billing integration (REPOSITORY_DERIVED_ANSWER).
-- ▨ **Data safety**: paste answers from DATA_SAFETY_DRAFT.md — "No data collected / No data shared". Structure per (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/10787469).
+- ▨ **Data safety**: paste answers from DATA_SAFETY_DRAFT.md — SDK diagnostic collection = Yes; sharing = No per SDK disclosure; owner confirms final taxonomy and required/non-ephemeral treatment. Structure per (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/10787469).
 - ▨ **Content rating**: IARC questionnaire for all apps (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9859655). For this utility: no violence/gambling/UGC/user interaction → expected rating **Everyone (3+)**. Email for IARC confirmation: OWNER_MUST_CONFIRM.
 - ▨ **Target audience**: age group **13+** ("Not designed for children"); no appeal-to-children marketing (photos/wallpapers = adult framing) (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9867159).
 - ▨ **News**: not a news app → No.

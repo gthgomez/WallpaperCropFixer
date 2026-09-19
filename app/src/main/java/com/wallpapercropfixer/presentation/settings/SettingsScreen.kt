@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wallpapercropfixer.BuildConfig
 import com.wallpapercropfixer.R
 import com.wallpapercropfixer.domain.model.UserSettings
 import com.wallpapercropfixer.presentation.components.FillModeRow
@@ -269,6 +270,17 @@ internal fun SettingsContent(
                         }
                     }
                 }
+
+                Text(
+                    text = stringResource(
+                        R.string.settings_build_provenance,
+                        BuildConfig.VERSION_NAME,
+                        BuildConfig.VERSION_CODE,
+                        BuildConfig.SOURCE_COMMIT
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 TextButton(
                     onClick = { uriHandler.openUri(PRIVACY_URL) },

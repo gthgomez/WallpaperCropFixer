@@ -1,4 +1,12 @@
-# WallpaperCropFixer — Release Readiness Report (1.0 RC1)
+# WallpaperCropFixer — Release Readiness Report
+
+## Current RC2 preparation — 2026-09-19
+
+Starting live main: `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc`. Current work is post-RC1. Candidate SHA, test count, lint result, artifact paths/hashes and preflight result are **PENDING integrated certification**. No RC2 tag has been created.
+
+Physical S25 Ultra QA, secondary Pixel-class QA, TalkBack, privacy traffic capture and Play Console validation are **NOT EXECUTED for RC2**. Build Settings provenance must accompany new device evidence. Do not infer current behavior from screenshots lacking an installed source revision.
+
+## Historical RC1 report (retained evidence, not RC2 certification)
 
 **Campaign date:** 2026-09-05
 **Baseline main SHA:** 97f4ba4 · **Final main SHA:** see §Record · **RC SHA:** see §Record
@@ -81,5 +89,5 @@ state. The hashes above pin the verification boundary this campaign validated.
 ## 5. Remaining owner actions
 See `docs/release/OWNER_ACTIONS.md` (device QA, keystore custody, Play Console, declarations, submission).
 
-## 6. Explicitly deferred (POST_LAUNCH)
-Background-fill UI, dark/dynamic theme, localization, splash screen, androidTest expansion, versionCode automation, release-domain automation, lock-preview focus model redesign (no release-critical defect reproduced).
+## 6. Historical RC1 deferrals (superseded where post-RC1 implemented)
+Post-RC1 PRs #6–#8 added Quiet Gallery UI, snapshot-safe rendering, background controls, deterministic blur and clean preview. Those features are no longer deferred. Localization, splash screen, broader androidTest coverage, versionCode/release-domain automation and device-dependent launcher certification remain outside this bounded campaign unless explicitly addressed.

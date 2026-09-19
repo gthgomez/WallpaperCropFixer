@@ -1,14 +1,15 @@
 # WallpaperCropFixer Status
 
-**Last verified:** 2026-09-05
-**Status:** 1.0 RC1 frozen (tag `v1.0.0-rc1`) — physical-device QA + Play Console owner actions remain
-**Confidence:** high for engineering and release-trust verification (see `docs/release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md` §2–§3 for the executed command matrix and artifact hashes). Hosted CI green on PRs #2 and #5; privacy policy live (HTTP 200); upload signing fails closed. Owner handoff: `docs/release/OWNER_ACTIONS.md`.
+**Updated:** 2026-09-19
+**State:** Post-RC1 main; RC2 implementation and certification in progress. No RC2 tag.
+**Starting main:** `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc` (live main checked at campaign start).
+Historical RC1 results do not certify current source. See the release readiness report for the candidate record and `QA_CHECKLIST.md` for pending physical/Play gates.
 
 ## Purpose
 
 Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to assist positioning crops around faces, handling EXIF orientation mapping, and preventing aggressive system wallpaper crops.
 
-## Verified Capabilities
+## Source capabilities (candidate verification tracked separately)
 
 - Explicit `releaseVerification` AAB/APK builds run R8/resource shrinking and are not upload-ready; `bundleRelease` fails closed without runtime signing inputs.
 - Full EXIF orientation matrix mapping (orientations 1–8) and upright canonical bounds calculation.
@@ -31,15 +32,19 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 ## In Progress / Remaining (non-code)
 
 - **Physical-device QA matrix** (Samsung One UI, Pixel, API 26–28 legacy storage) — see QA_CHECKLIST.md.
-- **GitHub Pages enablement** for the privacy-policy URL (OWNER ACTION; current deploy failed with GitHub Pages 404).
+- **Public privacy URL:** deployment was recorded successful on 2026-09-05; recheck reachability and updated content before submission.
 - **Public developer/entity and privacy contact** must replace explicit owner fields in `PRIVACY.md`.
 - **Play Console Data Safety form** based on the PRIVACY.md worksheet (OWNER ACTION).
 - **Upload-key signing / Play App Signing** configuration (OWNER ACTION; env-var signing is wired in `app/build.gradle.kts`).
 - Closed testing (12+ testers / 14 days) and production access application.
 
+## Repository checks
+
+Branch protection was configured during the RC2 campaign to require `verify`, `dependency-policy`, and `secrets-scan`, including administrator enforcement and pull requests. Candidate readiness still requires CI on the exact reviewed head.
+
 ## Blockers
 
-- No known unaddressed code blocker after local verification; public privacy hosting/contact, vulnerability database gate, physical QA, and secure signing remain external gates.
+- RC2 code/release gates remain pending until the integrated candidate is tested. Public identity/contact, physical QA, privacy traffic, secure signing and Play actions remain owner/device gates.
 
 ## Verification
 
@@ -49,6 +54,6 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 ## Evidence Sources
 
-- [README.md](file:///C:/Workspace/Project_Android/WallpaperCropFixer/README.md)
-- [PRIVACY.md](file:///C:/Workspace/Project_Android/WallpaperCropFixer/PRIVACY.md)
-- [QA_CHECKLIST.md](file:///C:/Workspace/Project_Android/WallpaperCropFixer/QA_CHECKLIST.md)
+- [README.md](README.md)
+- [PRIVACY.md](PRIVACY.md)
+- [QA_CHECKLIST.md](QA_CHECKLIST.md)

@@ -1,7 +1,7 @@
 # OWNER_ACTIONS.md — WallpaperCropFixer Release Dashboard
 
-Owner: Jonathan Gomez Aguilar | Package: `com.wallpapercropfixer` | v1.0 (versionCode 1)
-Prepared by: release agent, 2026-09-05. Everything below is action only the account/key holder can perform.
+Developer entity: OWNER_PROVIDE_PLAY_DEVELOPER_ENTITY | Package: `com.wallpapercropfixer` | v1.0 (versionCode 1)
+Updated 2026-09-19 for post-RC1 / RC2 preparation. Historical completed actions are explicitly dated; device and Console gates remain pending.
 Support email: **OWNER_MUST_CONFIRM** (placeholder in docs; a real address is needed before submission).
 
 ---
@@ -13,7 +13,7 @@ Support email: **OWNER_MUST_CONFIRM** (placeholder in docs; a real address is ne
 | 1.1 | ~~Enable GitHub Pages~~ **DONE by agent 2026-09-05** — Pages enabled and the privacy URL verified live (HTTP 200) | Privacy policy is a hard Play requirement; it must stay reachable from now on | `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` | Privacy page source in repo; deploy workflow runs on `PRIVACY.md` changes |
 | 1.2 | Verify Play Console registration is complete and **identity verification** has started | New personal accounts require identity verification before app creation; closed-testing requirements then apply (12 testers / 14 days) | https://play.google.com/console | Play-side implications mapped in PLAY_SUBMISSION_CHECKLIST.md |
 | 1.3 | Confirm GitHub Actions billing is healthy (no payment failure / spending cap block) | CI verification builds (debug-signed `bundleReleaseVerification`) run on Actions; a billing stop silently halts release verification | GitHub → Settings → Billing | N/A |
-| 1.4 | Review and **merge licensing PR #3**; close superseded **PR #4** if agreed | Third-party license hygiene is a legal call only the owner can make | GitHub repo → Pull requests | Both PRs inspected; PR #3 supersedes PR #4 — summary of differences available on request |
+| 1.4 | Licensing workflow complete: PR #3 merged, PR #4 closed (observed 2026-09-19) | No stale merge action remains | GitHub pull requests | Preserve the current licensing terms |
 | 1.5 | Confirm the real support email | Store listing and privacy policy both need a working contact address | — | Placeholder flagged `OWNER_MUST_CONFIRM` in every draft doc |
 
 ## 2. BEFORE INTERNAL / CLOSED TESTING
@@ -30,7 +30,7 @@ Support email: **OWNER_MUST_CONFIRM** (placeholder in docs; a real address is ne
 | # | Action | Why | Where | What the agent prepared |
 |---|--------|-----|-------|-------------------------|
 | 3.1 | Approve listing copy, screenshots, and feature graphic | The listing is the owner's public voice | Play Console → Grow → Store listing | STORE_LISTING_DRAFT.md: title/short/full description within verified limits, 5-screenshot plan, feature-graphic concept |
-| 3.2 | Submit App content declarations: Data safety, content rating (IARC), target audience, **ads = none**, **app access = none** | Each declaration is a policy statement made under your account | Play Console → Policy and programs → App content | Ready-to-paste answers in DATA_SAFETY_DRAFT.md and PLAY_SUBMISSION_CHECKLIST.md |
+| 3.2 | Submit App content declarations: Data safety, content rating (IARC), target audience, **ads = none**, **app access = none** | Each declaration is a policy statement made under your account | Play Console → Policy and programs → App content | Draft answers requiring owner confirmation in DATA_SAFETY_DRAFT.md and PLAY_SUBMISSION_CHECKLIST.md; SDK diagnostics mean collection = Yes |
 | 3.3 | Upload the **owner-signed release AAB** to the closed testing track | The CI `bundleReleaseVerification` artifact is debug-signed and NOT upload-ready; only your locally signed build is | Play Console → Testing → Closed testing → Releases | Artifact naming and verification steps in SIGNING_RUNBOOK.md §7 |
 | 3.4 | Decide rollout strategy for production (staged vs full) | Staged rollout limits blast radius of a v1.0 surprise | Play Console → Production → Releases | Recommendation: staged 20% → 100% after first clean week |
 
@@ -44,4 +44,4 @@ Support email: **OWNER_MUST_CONFIRM** (placeholder in docs; a real address is ne
 
 ---
 
-**Rule of thumb:** if it needs your password, your key, or your legal judgment — it is on this page. Everything else the agent has already prepared in the sibling documents.
+**Rule of thumb:** if it needs your password, your key, or your legal judgment — it is on this page. Candidate engineering certification is tracked separately in the release readiness report. Do not create the RC2 tag until required physical QA exists or the owner explicitly accepts that outstanding gate.
