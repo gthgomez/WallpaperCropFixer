@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Warning
@@ -201,7 +203,7 @@ internal fun EditorContent(
             val previewMaxHeight = if (isCleanPreview) {
                 (maxHeight * 0.75f).coerceIn(300.dp, 750.dp)
             } else {
-                (maxHeight * 0.42f).coerceIn(240.dp, 500.dp)
+                (maxHeight * 0.55f).coerceIn(260.dp, 560.dp)
             }
 
             if (state.isLoading) {
@@ -268,50 +270,20 @@ internal fun EditorContent(
                 if (!isCleanPreview) {
                     StatusRow(state, callbacks)
 
-                if (state.activeBitmap != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.editor_focus_linked),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
-                }
-
-                state.deviceProfile?.let { profile ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.editor_device_info,
-                            profile.manufacturer,
-                            profile.model
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (state.activeBitmap != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
+                    state.deviceProfile?.let { profile ->
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            stringResource(R.string.editor_launcher_disclaimer),
+                            text = stringResource(
+                                R.string.editor_device_info,
+                                profile.manufacturer.lowercase(java.util.Locale.ROOT).replaceFirstChar { it.titlecase(java.util.Locale.ROOT) },
+                                profile.model
+                            ) + " · " + stringResource(R.string.editor_launcher_disclaimer),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 24.dp)
                         )
                     }
-                }
 
                     Spacer(Modifier.height(20.dp))
 
@@ -353,7 +325,7 @@ private fun EditorTopBar(
         if (state.activeBitmap != null) {
             IconButton(onClick = onToggleCleanPreview) {
                 Icon(
-                    Icons.Default.Info,
+                    if (isCleanPreview) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                     contentDescription = stringResource(
                         if (isCleanPreview) R.string.editor_exit_clean_preview else R.string.editor_clean_preview
                     ),
@@ -388,9 +360,9 @@ private fun PreviewStage(
     isCleanPreview: Boolean = false
 ) {
     val stageWidth = minOf(
-        availableWidth * 0.72f,
+        availableWidth * 0.84f,
         previewMaxHeight * state.deviceAspectRatio
-    ).coerceAtLeast(140.dp)
+    )
 
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Crossfade(
@@ -433,14 +405,14 @@ private fun PreviewStage(
             Icon(
                 Icons.Default.Warning,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = LocalQgColors.current.advisory,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 stringResource(R.string.editor_low_resolution),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = LocalQgColors.current.advisory
             )
         }
     }
@@ -571,11 +543,6 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    stringResource(state.cropMode.descriptionRes()),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
             Spacer(Modifier.height(8.dp))
             ModeChipRow(
@@ -584,6 +551,20 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                     onSelect = callbacks.onCropMode,
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(state.cropMode.descriptionRes()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (state.wallpaperTarget == WallpaperTarget.BOTH) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.editor_focus_linked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -653,7 +634,11 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        stringResource(R.string.editor_face_aware_unavailable),
+                        stringResource(
+                            if (state.faceDetectionStatus == FaceDetectionStatus.NO_FACES)
+                                R.string.editor_face_none
+                            else R.string.editor_face_aware_unavailable
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -675,18 +660,25 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        stringResource(R.string.editor_background_when_space),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
                 Spacer(Modifier.height(8.dp))
                 FillModeRow(
                     selected = state.backgroundFillMode,
                     enabled = !state.isCommitting,
                     onSelect = callbacks.onFillMode,
+                    enabled = state.isPreviewCurrent && state.displayedPreview?.plan?.usePadding == true && !state.isApplying && !state.isExporting,
                     modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(
+                        if (state.isPreviewCurrent && state.displayedPreview?.plan?.usePadding == true)
+                            R.string.editor_background_when_space
+                        else if (state.isRendering) R.string.editor_background_updating
+                        else R.string.editor_background_not_exposed
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

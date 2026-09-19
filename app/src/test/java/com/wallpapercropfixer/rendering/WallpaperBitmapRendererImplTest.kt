@@ -52,6 +52,35 @@ class WallpaperBitmapRendererImplTest {
         )
 
     @Test
+    fun `color background uses photo edges instead of black`() {
+        val context = RuntimeEnvironment.getApplication()
+        val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
+        val photoColor = Color.rgb(180, 100, 60)
+        bitmap.eraseColor(photoColor)
+        val file = File(context.cacheDir, "color-background.png")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+        val meta = runBlocking { AndroidImageRepository(context).readImageMeta(file.absolutePath) }
+        val request = WallpaperRenderRequest(
+            source = meta,
+            deviceProfile = DeviceProfile("test", "phone", 35, 100, 200, 1f, 0.5f),
+            behaviorProfile = WallpaperBehaviorProfile("generic", "generic", 1f, 1f),
+            target = WallpaperTarget.LOCK,
+            cropMode = CropMode.SAFE_FIT,
+            backgroundFillMode = BackgroundFillMode.SOLID,
+            manualFocusPoint = null,
+            enableFaceAwareFocus = false
+        )
+        val plan = WallpaperCropEngineImpl(TargetCanvasSpecFactory(), FocusPointResolver(), CropStrategySelector())
+            .buildPlan(request, null)
+        val output = runBlocking { buildRenderer(context).render(request, plan) }
+        assertTrue(plan.usePadding)
+        assertEquals(photoColor, output.getPixel(0, 0))
+        assertEquals(photoColor, output.getPixel(99, 199))
+        output.recycle()
+    }
+
+    @Test
     fun `render produces opaque canvas-sized output for blur padding`() {
         val context = RuntimeEnvironment.getApplication()
         val file = writeJpeg(context, 800, 600, "src_800x600.jpg")

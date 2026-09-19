@@ -25,7 +25,7 @@ import com.wallpapercropfixer.R
 import com.wallpapercropfixer.domain.model.BackgroundFillMode
 
 /**
- * Blur / Solid / Gradient finish selector with labeled color swatches.
+ * Blur / Color / Gradient finish selector with labeled color swatches.
  *
  * Callers should only show this row when the selected crop mode can expose
  * background (a plan without padding leaves nothing for the finish to paint).

@@ -70,7 +70,8 @@ private val AppShapes = Shapes(
 /** Tokens with no Material color-slot: success state and the photo stage surface. */
 data class QgColors(
     val success: Color,
-    val stage: Color
+    val stage: Color,
+    val advisory: Color = Color(0xFF785A12)
 )
 
 val LocalQgColors = staticCompositionLocalOf {
