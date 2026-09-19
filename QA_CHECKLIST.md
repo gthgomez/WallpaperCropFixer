@@ -42,7 +42,7 @@ Minimum matrix:
 
 | Device class | Required checks |
 |---|---|
-| Modern Android 15/16-class phone | Photo Picker, EXIF-rotated image, face/no-face/multi-face, Safe Fit/Balanced/Fill, blur/gradient/solid, HOME/LOCK/BOTH, Save, Apply, rotation, large and very large photos, HEIC |
+| Modern Android 15/16-class phone | Photo Picker, EXIF-rotated image, face/no-face/multi-face, Safe Fit/Balanced/Fill, Blur/Gradient/Color, HOME/LOCK/BOTH, Save, Apply, rotation, large and very large photos, HEIC |
 | Legacy API 26–28 device | Picker without storage permission, rendering, Apply where supported, Save to app-specific external folder and truthful message |
 | Samsung One UI | HOME/LOCK/BOTH wallpaper behavior, launcher crop/zoom/parallax, face-aware framing |
 | Google Pixel | HOME/LOCK/BOTH behavior, launcher crop/zoom/parallax, face-aware framing |
