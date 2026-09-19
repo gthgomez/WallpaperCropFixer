@@ -136,7 +136,7 @@ fun DevicePreviewFrame(
                 bitmap = bitmap.asImageBitmap(),
                 // Announced once via the merged frame node above — a separate
                 // image description would double the TalkBack announcement.
-                contentDescription = null,
+                contentDescription = if (onFocusTap == null) stringResource(R.string.preview_image) else null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )

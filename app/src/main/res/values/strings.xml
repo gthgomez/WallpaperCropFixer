@@ -30,8 +30,8 @@
     <string name="preview_screen_lock">Lock</string>
     <string name="status_preview_ready">Preview ready</string>
     <string name="status_preparing">Preparing preview…</string>
-    <string name="status_updating">Updating · previous preview shown</string>
-    <string name="status_update_failed">Update failed · previous preview shown</string>
+    <string name="status_updating">Updating preview…</string>
+    <string name="status_update_failed">Preview update failed</string>
     <string name="editor_focus_linked">Focus is linked for Home and Lock.</string>
     <string name="editor_apply_to">Apply to</string>
     <string name="editor_apply_dest_home">Apply to Home</string>
@@ -43,12 +43,15 @@
     <string name="editor_face_aware_toggle">Face-aware crop, %1$s</string>
     <string name="editor_face_on">on</string>
     <string name="editor_face_off">off</string>
-    <string name="editor_face_aware_unavailable">Face framing wasn\'t available for this photo, so center framing was used.</string>
+    <string name="editor_face_aware_unavailable">Face detection unavailable — using center framing.</string>
+    <string name="editor_face_none">No face detected — using center framing.</string>
+    <string name="editor_background_not_exposed">No background in this framing</string>
+    <string name="editor_background_updating">Available after preview updates</string>
     <string name="editor_background">Background</string>
-    <string name="editor_background_when_space">When there is space</string>
-    <string name="editor_launcher_disclaimer">Your launcher may crop or zoom wallpapers differently from this preview.</string>
+    <string name="editor_background_when_space">Photo-derived finish</string>
+    <string name="editor_launcher_disclaimer">Launcher framing may vary.</string>
     <string name="editor_low_resolution">Low resolution — may appear pixelated</string>
-    <string name="editor_device_info">Optimized for your %1$s %2$s screen</string>
+    <string name="editor_device_info">Preview sized for %1$s %2$s</string>
     <string name="editor_save">Save</string>
     <string name="editor_applied_home">Wallpaper applied to home screen</string>
     <string name="editor_applied_lock">Wallpaper applied to lock screen</string>
@@ -59,16 +62,15 @@
         <item quantity="other">%1$d faces detected</item>
     </plurals>
 
-    <!-- Crop modes. Safe Fit preserves the complete source photo and pads when
-         the source and target aspect ratios differ. -->
+    <!-- Framing contracts: Safe Fit preserves the photo; Balanced caps crop removal. -->
     <string name="crop_mode_safe_fit">Safe Fit</string>
     <string name="crop_mode_balanced">Balanced</string>
     <string name="crop_mode_fill">Fill</string>
-    <string name="crop_mode_safe_fit_desc">Fewer cuts · pads when needed</string>
-    <string name="crop_mode_balanced_desc">Balanced coverage</string>
+    <string name="crop_mode_safe_fit_desc">Keeps the whole photo · adds background to fit</string>
+    <string name="crop_mode_balanced_desc">Crops up to 35% · adds background when needed</string>
     <string name="crop_mode_fill_desc">Fills screen · may crop</string>
-    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — preserves the whole photo and pads the background when aspect ratios differ</string>
-    <string name="crop_mode_balanced_a11y">Crop mode: Balanced — balances coverage and subject preservation</string>
+    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — keeps the complete photo and pads when aspect ratios differ</string>
+    <string name="crop_mode_balanced_a11y">Crop mode: Balanced — removes at most 35 percent of the photo for framing</string>
     <string name="crop_mode_fill_a11y">Crop mode: Fill — covers the entire screen, may crop edges</string>
 
     <!-- Wallpaper targets -->
@@ -78,7 +80,7 @@
 
     <!-- Background finish -->
     <string name="fill_blur">Blur</string>
-    <string name="fill_solid">Solid</string>
+    <string name="fill_solid">Color</string>
     <string name="fill_gradient">Gradient</string>
 
     <!-- Preview frame -->

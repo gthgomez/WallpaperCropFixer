@@ -141,11 +141,11 @@ internal fun EntryContent(
 
         CropMarkBadge()
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             text = stringResource(R.string.entry_headline),
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 28.dp)
@@ -161,7 +161,7 @@ internal fun EntryContent(
             modifier = Modifier.padding(horizontal = 28.dp)
         )
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
 
         // Fit demonstration — abstract and labeled as an example, not a promise.
         Box(
@@ -179,7 +179,7 @@ internal fun EntryContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
 
         Button(
             onClick = onChoosePhoto,
@@ -274,7 +274,7 @@ internal fun EntryContent(
             )
         }
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(24.dp))
     }
 }
 
