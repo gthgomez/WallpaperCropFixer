@@ -23,8 +23,8 @@ Fields:
 - ▨ Short description: `Preview how your photo fits home and lock screens before you set it. No ads.` — 76/80 chars (limit 80 — same source).
 - ▨ Full description: STORE_LISTING_DRAFT.md §2 (≤4000 chars, same source).
 - ▨ App icon: 512×512 32-bit PNG ≤1 MB (export from repo adaptive-icon foreground/background — REPOSITORY_DERIVED_ANSWER).
-- ▨ Feature graphic: 1024×500, JPEG or 24-bit PNG without alpha (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9866151) — concept in STORE_LISTING_DRAFT.md §4.
-- ▨ Phone screenshots: **minimum 2** (we ship 5), PNG/JPEG, 16:9 or 9:16, each side 320–3840 px, max 8 per device type (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: same source) — plan in STORE_LISTING_DRAFT.md §3.
+- ▨ Feature graphic: 1024×500, JPEG or 24-bit PNG without alpha (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9866151) — concept in STORE_LISTING_DRAFT.md §5.
+- ▨ Phone screenshots: **minimum 2** (5 planned; not yet captured), PNG/JPEG, 16:9 or 9:16, each side 320–3840 px, max 8 per device type (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: same source) — plan in STORE_LISTING_DRAFT.md §4.
 - ☐ Category: **Personalization**; tags: wallpaper, photos/customization (Play offers tag picker — OWNER_MUST_CONFIRM exact tags available).
 - ☐ Store contact: email OWNER_MUST_CONFIRM; website `https://github.com/gthgomez/WallpaperCropFixer` (or Pages site); no phone required.
 

@@ -54,6 +54,6 @@ Rules: device-frame screenshots captured on Galaxy S25 Ultra (primary certificat
 - **What to avoid:** promotional badges ("FREE!"), stars, awards, device buttons, or anything resembling Play UI.
 
 ## 6. Contact fields
-- Email: OWNER_MUST_CONFIRM (personal gmail placeholder in repo docs must be replaced).
+- Email: OWNER_MUST_CONFIRM (supply the real public support address).
 - Website: `https://github.com/gthgomez/WallpaperCropFixer` (public repo) or the Pages site (live).
 - Privacy policy URL: `https://gthgomez.github.io/WallpaperCropFixer/PRIVACY.html` (live, verified 2026-09-05).

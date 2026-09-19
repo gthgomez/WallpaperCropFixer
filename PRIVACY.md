@@ -28,7 +28,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 ## Photo selection & storage
 
 - **Photo Picker (`PickVisualMedia`):** You choose one image using the Android system Photo Picker. The app does not request broad photo-library permissions (`READ_MEDIA_IMAGES` or `READ_EXTERNAL_STORAGE`).
-- **Temporary local cache:** The app copies the selected image into private app cache storage solely for crop processing, face detection, and preview generation during your session. Cache files are excluded from cloud backup. Files named by the app are pruned when a new photo is selected if they are older than 24 hours; Android may also clear cache storage earlier. The current photo can remain until the session ends or the operating system clears the cache.
+- **Temporary local cache:** The app copies the selected image into private app cache storage solely for crop processing, face detection, and preview generation during your session. Cache files are excluded from cloud backup. Files named by the app are pruned when a new photo is selected if they are older than 24 hours; Android may also clear cache storage earlier. Cache files may remain beyond the session until a later pruning pass or the operating system clears the cache.
 - **Save to gallery:** On Android 10+ (API 29+), saved wallpapers are written via **MediaStore** to `Pictures/WallpaperCropFixer`. On earlier Android versions the file is written to the app's external folder (visible via a Files app, not the gallery) — the app never requests a storage permission.
 
 ## On-device processing & ML Kit diagnostics
