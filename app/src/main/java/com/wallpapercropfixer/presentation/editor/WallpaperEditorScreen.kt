@@ -121,8 +121,8 @@ fun WallpaperEditorScreen(
     LaunchedEffect(imageUri) { viewModel.loadImage(imageUri) }
 
     // System back during an in-flight apply/export would cancel the operation and
-    // can leave the wallpaper half-applied, so back is swallowed while busy.
-    BackHandler(enabled = state.isBusy) { }
+    // can leave the wallpaper half-applied, so back is swallowed only while committing.
+    BackHandler(enabled = state.isCommitting) { }
 
     // Re-resolve device metrics after orientation/window changes so the canvas and
     // preview always match the current display. smallestScreenWidthDp catches
@@ -205,6 +205,7 @@ internal fun EditorContent(
             }
 
             if (state.isLoading) {
+                EditorTopBar(state, callbacks, isCleanPreview, onToggleCleanPreview = {})
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(
@@ -336,7 +337,7 @@ private fun EditorTopBar(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = callbacks.onBack) {
+        IconButton(onClick = callbacks.onBack, enabled = !state.isCommitting) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.back),
@@ -364,7 +365,7 @@ private fun EditorTopBar(
                 )
             }
         }
-        IconButton(onClick = callbacks.onReset, enabled = state.sourceImageMeta != null) {
+        IconButton(onClick = callbacks.onReset, enabled = state.sourceImageMeta != null && !state.isCommitting) {
             Icon(
                 Icons.Default.RestartAlt,
                 contentDescription = stringResource(R.string.editor_reset_defaults),
@@ -406,8 +407,8 @@ private fun PreviewStage(
                 focusPoint = canvasFocusFor(displayed),
                 // Hide the focus reticle in clean preview mode
                 showFocusMarker = !isCleanPreview,
-                // Focus editing requires a current (not retained) render.
-                onFocusTap = if (state.isPreviewCurrent && !state.isBusy && !isCleanPreview) {
+                // Taps map through the displayed snapshot, including during cancellable renders.
+                onFocusTap = if (state.displayedPreview != null && !state.isCommitting && !isCleanPreview) {
                     { tapped -> callbacks.onFocusTap(sourceFocusForTap(state, tapped)) }
                 } else null,
                 modifier = Modifier.width(stageWidth)
@@ -579,7 +580,8 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
             Spacer(Modifier.height(8.dp))
             ModeChipRow(
                 selected = state.cropMode,
-                onSelect = callbacks.onCropMode,
+                enabled = !state.isCommitting,
+                    onSelect = callbacks.onCropMode,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -613,6 +615,7 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                 )
                 Switch(
                     checked = state.faceAwareEnabled,
+                    enabled = !state.isCommitting,
                     onCheckedChange = callbacks.onFaceAware,
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -681,6 +684,7 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                 Spacer(Modifier.height(8.dp))
                 FillModeRow(
                     selected = state.backgroundFillMode,
+                    enabled = !state.isCommitting,
                     onSelect = callbacks.onFillMode,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -715,6 +719,7 @@ private fun EditorBottomBar(
                 )
                 WallpaperTargetTabs(
                     selected = state.wallpaperTarget,
+                    enabled = !state.isCommitting,
                     onSelect = callbacks.onTarget
                 )
             }
@@ -733,7 +738,11 @@ private fun EditorBottomBar(
                         .height(52.dp),
                     shape = MaterialTheme.shapes.small
                 ) {
-                    Text(stringResource(R.string.editor_save))
+                    if (state.isExporting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(stringResource(if (state.isExporting) R.string.editor_saving else R.string.editor_save))
                 }
 
                 Button(
@@ -755,12 +764,14 @@ private fun EditorBottomBar(
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    if (state.isApplying || state.isExporting) {
+                    if (state.isApplying) {
                         CircularProgressIndicator(
                             color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(20.dp)
                         )
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.editor_applying))
                     } else {
                         Text(
                             stringResource(applyLabelRes(state.wallpaperTarget)),

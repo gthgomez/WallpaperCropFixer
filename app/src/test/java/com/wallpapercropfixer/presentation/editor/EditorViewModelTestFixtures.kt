@@ -56,8 +56,22 @@ class FakeSettingsRepository : SettingsRepository {
 }
 
 class FakeDeviceProfileRepository : DeviceProfileRepository {
-    override suspend fun getCurrentDeviceProfile(): DeviceProfile =
-        DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
+    var profile = DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
+    var gate: CompletableDeferred<Unit>? = null
+    var failuresRemaining = 0
+    val failuresAtCall: MutableSet<Int> = ConcurrentHashMap.newKeySet()
+    @Volatile var calls = 0
+
+    override suspend fun getCurrentDeviceProfile(): DeviceProfile {
+        val callNumber = ++calls
+        val profileAtCall = profile
+        gate?.await()
+        if (callNumber in failuresAtCall || failuresRemaining > 0) {
+            if (failuresRemaining > 0) failuresRemaining--
+            error("synthetic device profile failure")
+        }
+        return profileAtCall
+    }
 }
 
 class FakeBehaviorRepository : WallpaperBehaviorRepository {
@@ -110,6 +124,7 @@ class FakeExportRepository(
     var started: CompletableDeferred<Unit>? = null
     var gate: CompletableDeferred<Unit>? = null
     var failWith: Throwable? = null
+    var failPrefix: String? = null
 
     override suspend fun exportBitmap(
         bitmap: Bitmap,
@@ -119,6 +134,7 @@ class FakeExportRepository(
     ): ExportResult {
         started?.complete(Unit)
         gate?.await()
+        if (failPrefix != null && fileName.startsWith(failPrefix!!)) error("export failed")
         failWith?.let { throw it }
         exported.add(bitmap to fileName)
         return result

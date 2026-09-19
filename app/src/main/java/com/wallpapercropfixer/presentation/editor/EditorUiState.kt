@@ -78,6 +78,10 @@ data class EditorUiState(
     val lockPreviewBitmap: Bitmap?
         get() = publishedPreview?.lock?.bitmap
 
+    /** Only irreversible output work blocks navigation and editing. */
+    val isCommitting: Boolean
+        get() = isApplying || isExporting
+
     /** True while any operation can invalidate or consume the current preview. */
     val isBusy: Boolean
         get() = isLoading || isRendering || isApplying || isExporting

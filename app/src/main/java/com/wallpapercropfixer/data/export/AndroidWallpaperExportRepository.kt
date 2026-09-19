@@ -41,7 +41,7 @@ class AndroidWallpaperExportRepository @Inject constructor(
 
             try {
                 val ok = context.contentResolver.openOutputStream(uri)?.use { out ->
-                    bitmap.compress(format, quality, out)
+                    bitmap.compress(format, quality.coerceIn(0, 100), out)
                 } ?: false
 
                 if (!ok) {
@@ -93,12 +93,15 @@ class AndroidWallpaperExportRepository @Inject constructor(
                 }
             }
 
-            file.outputStream().use { out ->
-                val ok = bitmap.compress(format, quality, out)
-                if (!ok) {
-                    file.delete()
-                    throw IllegalStateException("Bitmap compression failed for $file")
+            try {
+                file.outputStream().use { out ->
+                    check(bitmap.compress(format, quality.coerceIn(0, 100), out)) {
+                        "Bitmap compression failed for $file"
+                    }
                 }
+            } catch (e: Exception) {
+                file.delete()
+                throw e
             }
             ExportResult(
                 destination = if (externalPictures != null) {

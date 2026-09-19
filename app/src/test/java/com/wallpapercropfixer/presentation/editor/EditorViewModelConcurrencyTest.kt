@@ -126,6 +126,43 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
+    fun `configuration refresh for A cannot publish metrics or failure after B loads`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+
+        vm.loadImage("A")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.refreshForConfigurationChange()
+        waitForCondition { deviceRepository.calls >= 2 }
+        // The suspended refresh is call 2. It fails after B has taken ownership.
+        deviceRepository.failuresAtCall += 2
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        vm.loadImage("B")
+        waitForCondition { deviceRepository.calls >= 3 && vm.uiState.value.imageUri == "B" }
+        deviceRepository.gate!!.complete(Unit)
+
+        waitForCondition {
+            vm.uiState.value.imageUri == "B" &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
+        assertFalse("stale refresh failure must not poison the new image", vm.uiState.value.renderFailed)
+    }
+
+    @Test
     fun `cancellation of a suspended render does not surface as an error`() {
         val renderer = SuspendingRenderer()
         val vm = buildEditorViewModel(renderer = renderer)
@@ -226,126 +263,229 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
-    fun `apply completion cannot clear busy state or certify stale crop revision`() {
-        val renderer = FakeWallpaperBitmapRenderer()
-        val applyRepo = FakeApplyRepository().apply {
+    fun `committing apply rejects framing and image mutations until completion`() {
+        val repo = FakeApplyRepository().apply {
             started = CompletableDeferred()
             gate = CompletableDeferred()
         }
-        val vm = buildEditorViewModel(renderer = renderer, applyRepository = applyRepo)
-        vm.loadImage("file:///photo")
-        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
-        val appliedRevision = vm.uiState.value.publishedPreview!!.revision
-        val appliedBitmap = vm.uiState.value.previewBitmap
-
+        val vm = buildEditorViewModel(applyRepository = repo)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        val before = vm.uiState.value
         vm.applyWallpaper()
-        runBlocking { applyRepo.started!!.await() }
-
-        val renderB = CompletableDeferred<Unit>()
-        renderer.gates[CropMode.FILL] = renderB
+        runBlocking { repo.started!!.await() }
         vm.setCropMode(CropMode.FILL)
-        waitForCondition { (renderer.invocationCount[CropMode.FILL] ?: 0) == 1 }
-
-        applyRepo.gate!!.complete(Unit)
-        waitForCondition { !vm.uiState.value.isApplying }
-
-        assertTrue("render B must remain busy after apply A completes", vm.uiState.value.isRendering)
-        assertNull("stale apply must not certify revision A", vm.uiState.value.successMessage)
-        assertNull("stale apply must not surface an error", vm.uiState.value.errorMessage)
-        assertEquals(1, applyRepo.applied.size)
-        assertEquals(appliedBitmap, applyRepo.applied.single().first)
-        // Keep-last-good: revision A stays on screen until revision B lands, but the
-        // stale apply completion must not certify it — display comes from the
-        // retained snapshot while eligibility stays withdrawn.
-        assertNull("eligibility must stay withdrawn while render B is in flight",
-            vm.uiState.value.publishedPreview)
-        assertEquals("revision A stays visible while render B is in flight",
-            appliedBitmap, vm.uiState.value.activeBitmap)
-        assertEquals("retained preview must still be revision A",
-            appliedRevision, vm.uiState.value.retainedPreview!!.revision)
-
-        renderB.complete(Unit)
-        waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap?.width == CropMode.FILL.ordinal + 1 }
-        assertTrue(vm.uiState.value.publishedPreview!!.revision > appliedRevision)
-    }
-
-    @Test
-    fun `export completion cannot clear busy state or certify stale face-aware revision`() {
-        val renderer = FakeWallpaperBitmapRenderer()
-        val exportRepo = FakeExportRepository().apply {
-            started = CompletableDeferred()
-            gate = CompletableDeferred()
-        }
-        val vm = buildEditorViewModel(renderer = renderer, exportRepository = exportRepo)
-        vm.loadImage("file:///photo")
-        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
-        val exportedBitmap = vm.uiState.value.previewBitmap
-        val exportedRevision = vm.uiState.value.publishedPreview!!.revision
-
-        vm.exportWallpaper()
-        runBlocking { exportRepo.started!!.await() }
-
-        val renderB = CompletableDeferred<Unit>()
-        renderer.gates[CropMode.BALANCED] = renderB
-        vm.toggleFaceAware(false)
-        waitForCondition { (renderer.invocationCount[CropMode.BALANCED] ?: 0) >= 2 }
-
-        exportRepo.gate!!.complete(Unit)
-        waitForCondition { !vm.uiState.value.isExporting }
-
-        assertTrue("render B must remain busy after export A completes", vm.uiState.value.isRendering)
-        assertNull("stale export must not certify revision A", vm.uiState.value.successMessage)
-        assertEquals(exportedBitmap, exportRepo.exported.single().first)
-        // Keep-last-good: revision A stays on screen until revision B lands, but the
-        // stale export completion must not certify it — display comes from the
-        // retained snapshot while eligibility stays withdrawn.
-        assertNull("eligibility must stay withdrawn while render B is in flight",
-            vm.uiState.value.publishedPreview)
-        assertEquals("revision A stays visible while render B is in flight",
-            exportedBitmap, vm.uiState.value.activeBitmap)
-        assertEquals("retained preview must still be revision A",
-            exportedRevision, vm.uiState.value.retainedPreview!!.revision)
-
-        renderB.complete(Unit)
-        waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.previewBitmap != null }
-        assertTrue(vm.uiState.value.publishedPreview!!.revision > exportedRevision)
-    }
-
-    @Test
-    fun `apply BOTH owns one published revision while a new preview begins`() {
-        val renderer = FakeWallpaperBitmapRenderer()
-        val applyRepo = FakeApplyRepository().apply {
-            started = CompletableDeferred()
-            gate = CompletableDeferred()
-        }
-        val vm = buildEditorViewModel(renderer = renderer, applyRepository = applyRepo)
-        vm.loadImage("file:///photo")
-        waitForCondition { vm.uiState.value.previewBitmap != null && !vm.uiState.value.isBusy }
-
         vm.setWallpaperTarget(WallpaperTarget.BOTH)
-        waitForCondition { vm.uiState.value.lockPreviewBitmap != null && !vm.uiState.value.isBusy }
-        val revisionA = vm.uiState.value.publishedPreview!!
+        vm.toggleFaceAware(false)
+        vm.updateManualFocusPoint(FocusPoint(0.2f, 0.3f))
+        vm.resetToDefaults()
+        vm.loadImage("replacement")
+        vm.refreshForConfigurationChange()
+        assertEquals(before.publishedPreview, vm.uiState.value.publishedPreview)
+        assertEquals(before.cropMode, vm.uiState.value.cropMode)
+        assertEquals(before.wallpaperTarget, vm.uiState.value.wallpaperTarget)
+        assertEquals(before.faceAwareEnabled, vm.uiState.value.faceAwareEnabled)
+        assertEquals("photo", vm.uiState.value.imageUri)
+        repo.gate!!.complete(Unit)
+        waitForCondition { !vm.uiState.value.isBusy }
+        assertEquals(R.string.editor_applied_home, vm.uiState.value.successMessage?.resId)
+    }
 
+    @Test
+    fun `committing save rejects edits but edits resume after completion`() {
+        val repo = FakeExportRepository().apply {
+            started = CompletableDeferred()
+            gate = CompletableDeferred()
+        }
+        val vm = buildEditorViewModel(exportRepository = repo)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        val publication = vm.uiState.value.publishedPreview
+        vm.exportWallpaper()
+        runBlocking { repo.started!!.await() }
+        vm.toggleFaceAware(false)
+        assertTrue(vm.uiState.value.faceAwareEnabled)
+        assertEquals(publication, vm.uiState.value.publishedPreview)
+        repo.gate!!.complete(Unit)
+        waitForCondition { !vm.uiState.value.isBusy }
+        vm.toggleFaceAware(false)
+        waitForCondition { !vm.uiState.value.isBusy }
+        assertFalse(vm.uiState.value.faceAwareEnabled)
+        assertTrue(vm.uiState.value.publishedPreview!!.revision > publication!!.revision)
+    }
+
+    @Test
+    fun `queued configuration refresh drains when gated apply finishes before snackbar dismissal`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val applyRepository = FakeApplyRepository().apply {
+            started = CompletableDeferred()
+            gate = CompletableDeferred()
+        }
+        val vm = buildEditorViewModel(
+            deviceProfileRepository = deviceRepository,
+            applyRepository = applyRepository
+        )
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
         vm.applyWallpaper()
-        runBlocking { applyRepo.started!!.await() }
+        runBlocking { applyRepository.started!!.await() }
+        vm.refreshForConfigurationChange()
 
-        val renderB = CompletableDeferred<Unit>()
-        renderer.gates[CropMode.FILL] = renderB
+        applyRepository.gate!!.complete(Unit)
+        waitForCondition {
+            !vm.uiState.value.isCommitting &&
+                vm.uiState.value.successMessage?.resId == R.string.editor_applied_home &&
+                deviceRepository.calls >= 2
+        }
+        assertEquals(R.string.editor_applied_home, vm.uiState.value.successMessage?.resId)
+
+        // Editing immediately cancels the snackbar effect, so the refresh must already
+        // be owned by the operation completion rather than clearSuccess().
         vm.setCropMode(CropMode.FILL)
-        waitForCondition { (renderer.invocationCount[CropMode.FILL] ?: 0) == 1 }
-        applyRepo.gate!!.complete(Unit)
-        waitForCondition { !vm.uiState.value.isApplying }
+        assertFalse("queued refresh must withdraw old geometry while metrics are gated",
+            vm.uiState.value.isPreviewCurrent)
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        vm.refreshForConfigurationChange()
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition {
+            deviceRepository.calls >= 3 &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
 
-        assertTrue(vm.uiState.value.isRendering)
-        assertNull(vm.uiState.value.successMessage)
-        assertEquals(2, applyRepo.applied.size)
-        assertEquals(listOf(WallpaperTarget.HOME, WallpaperTarget.LOCK), applyRepo.applied.map { it.second })
-        assertEquals(revisionA.home.bitmap, applyRepo.applied[0].first)
-        assertEquals(revisionA.lock!!.bitmap, applyRepo.applied[1].first)
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
 
-        renderB.complete(Unit)
-        waitForCondition { !vm.uiState.value.isBusy && vm.uiState.value.lockPreviewBitmap != null }
-        assertTrue(vm.uiState.value.publishedPreview!!.revision > revisionA.revision)
+    @Test
+    fun `queued configuration refresh drains when gated save finishes before snackbar dismissal`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val exportRepository = FakeExportRepository().apply {
+            started = CompletableDeferred()
+            gate = CompletableDeferred()
+        }
+        val vm = buildEditorViewModel(
+            deviceProfileRepository = deviceRepository,
+            exportRepository = exportRepository
+        )
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.exportWallpaper()
+        runBlocking { exportRepository.started!!.await() }
+        vm.refreshForConfigurationChange()
+
+        exportRepository.gate!!.complete(Unit)
+        waitForCondition {
+            !vm.uiState.value.isCommitting &&
+                vm.uiState.value.successMessage?.resId == R.string.export_saved_media_store &&
+                deviceRepository.calls >= 2
+        }
+        assertEquals(R.string.export_saved_media_store, vm.uiState.value.successMessage?.resId)
+
+        vm.setCropMode(CropMode.FILL)
+        assertFalse("queued refresh must withdraw old geometry while metrics are gated",
+            vm.uiState.value.isPreviewCurrent)
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition {
+            deviceRepository.calls >= 2 &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+
+        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
+
+    @Test
+    fun `failed configuration refresh keeps stale geometry ineligible until retry refreshes metrics`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.failuresRemaining = 1
+        vm.refreshForConfigurationChange()
+        waitForCondition {
+            deviceRepository.calls >= 2 &&
+                vm.uiState.value.renderFailed &&
+                !vm.uiState.value.isBusy
+        }
+
+        assertNull(vm.uiState.value.publishedPreview)
+        vm.retryRender()
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+        assertTrue("retry must perform a second device lookup", deviceRepository.calls >= 3)
+    }
+
+    @Test
+    fun `editing after failed configuration refresh cannot publish old metrics`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.failuresRemaining = 1
+        vm.refreshForConfigurationChange()
+        waitForCondition { vm.uiState.value.renderFailed && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.setCropMode(CropMode.FILL)
+        waitForCondition { deviceRepository.calls >= 3 }
+        assertFalse("editing must wait for refreshed metrics after failure",
+            vm.uiState.value.isPreviewCurrent)
+
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
+
+    @Test
+    fun `enabling face analysis waits then renders exactly once`() {
+        val faces = FakeFaceDetectionRepository()
+        val renderer = FakeWallpaperBitmapRenderer()
+        val settings = FakeSettingsRepository().apply {
+            settings.value = settings.value.copy(defaultFaceAwareEnabled = false)
+        }
+        val vm = buildEditorViewModel(settingsRepository = settings, renderer = renderer, faceDetectionRepository = faces)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        val baseline = renderer.renderCalls
+        faces.gates["photo"] = CompletableDeferred()
+        vm.toggleFaceAware(true)
+        waitForCondition { faces.started["photo"]?.isCompleted == true }
+        assertEquals(baseline, renderer.renderCalls)
+        faces.gates.getValue("photo").complete(Unit)
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        assertEquals(baseline + 1, renderer.renderCalls)
     }
 
     @Test
@@ -488,6 +628,47 @@ class EditorViewModelConcurrencyTest {
         assertEquals(2, exportRepo.exported.size)
         assertTrue(exportRepo.exported[0].second.startsWith("wcf_home_"))
         assertTrue(exportRepo.exported[1].second.startsWith("wcf_lock_"))
+    }
+
+    @Test
+    fun `both export attempts each target and reports either partial success`() {
+        for (failedPrefix in listOf("wcf_home", "wcf_lock")) {
+            val repo = FakeExportRepository().apply { failPrefix = failedPrefix }
+            val vm = buildEditorViewModel(exportRepository = repo)
+            vm.loadImage("photo")
+            waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+            vm.setWallpaperTarget(WallpaperTarget.BOTH)
+            waitForCondition { vm.uiState.value.lockPreviewBitmap != null && !vm.uiState.value.isBusy }
+            vm.exportWallpaper()
+            waitForCondition { !vm.uiState.value.isBusy }
+            assertEquals(1, repo.exported.size)
+            assertNull(vm.uiState.value.successMessage)
+            assertNotNull(vm.uiState.value.errorMessage)
+            assertTrue(vm.uiState.value.errorMessage?.resId != R.string.error_export)
+        }
+    }
+
+    @Test
+    fun `late face analysis after disabling cannot replace the center preview`() {
+        val faces = FakeFaceDetectionRepository()
+        val renderer = FakeWallpaperBitmapRenderer()
+        val settings = FakeSettingsRepository().apply {
+            settings.value = settings.value.copy(defaultFaceAwareEnabled = false)
+        }
+        val vm = buildEditorViewModel(settingsRepository = settings, renderer = renderer, faceDetectionRepository = faces)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        faces.gates["photo"] = CompletableDeferred()
+        vm.toggleFaceAware(true)
+        waitForCondition { faces.started["photo"]?.isCompleted == true }
+        vm.toggleFaceAware(false)
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+        val center = vm.uiState.value.publishedPreview
+        faces.gates.getValue("photo").complete(Unit)
+        waitForCondition { faces.completedCount == 1 }
+        assertFalse(vm.uiState.value.faceAwareEnabled)
+        assertEquals(center, vm.uiState.value.publishedPreview)
+        assertNull(vm.uiState.value.subjectAnalysis)
     }
 
     private class SuspendingRenderer : WallpaperBitmapRenderer {
