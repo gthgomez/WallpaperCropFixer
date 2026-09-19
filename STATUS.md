@@ -40,7 +40,7 @@ Wallpaper crop and adjustment utility using on-device ML Kit Face Detection to a
 
 ## Repository checks
 
-Branch protection was configured during the RC2 campaign to require `verify`, `dependency-policy`, and `secrets-scan`, including administrator enforcement and pull requests. Candidate readiness still requires CI on the exact reviewed head.
+Branch protection was configured during the RC2 campaign to require `Build, lint, and unit tests`, `Dependency declaration policy`, and `Secrets scan`, including administrator enforcement and pull requests. Candidate readiness still requires CI on the exact reviewed head.
 
 ## Blockers
 
