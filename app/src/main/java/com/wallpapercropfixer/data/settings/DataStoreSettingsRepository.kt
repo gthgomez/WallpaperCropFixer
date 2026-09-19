@@ -33,18 +33,19 @@ class DataStoreSettingsRepository @Inject constructor(
     }
 
     override fun observeSettings(): Flow<UserSettings> =
-        context.dataStore.data.map { prefs ->
-            UserSettings(
-                defaultCropMode = prefs[Keys.CROP_MODE]?.let { CropMode.valueOf(it) }
-                    ?: CropMode.BALANCED,
-                defaultWallpaperTarget = prefs[Keys.TARGET]?.let { WallpaperTarget.valueOf(it) }
-                    ?: WallpaperTarget.HOME,
-                defaultBackgroundFillMode = prefs[Keys.FILL_MODE]?.let { BackgroundFillMode.valueOf(it) }
-                    ?: BackgroundFillMode.BLUR,
-                defaultFaceAwareEnabled = prefs[Keys.FACE_AWARE] ?: true,
-                exportJpegQuality = prefs[Keys.JPEG_QUALITY] ?: 92
-            )
-        }
+        context.dataStore.data.map(::decodeSettings)
+
+    internal fun decodeSettings(prefs: Preferences): UserSettings =
+        UserSettings(
+            defaultCropMode = prefs[Keys.CROP_MODE]?.let { runCatching { CropMode.valueOf(it) }.getOrNull() }
+                ?: CropMode.BALANCED,
+            defaultWallpaperTarget = prefs[Keys.TARGET]?.let { runCatching { WallpaperTarget.valueOf(it) }.getOrNull() }
+                ?: WallpaperTarget.HOME,
+            defaultBackgroundFillMode = prefs[Keys.FILL_MODE]?.let { runCatching { BackgroundFillMode.valueOf(it) }.getOrNull() }
+                ?: BackgroundFillMode.BLUR,
+            defaultFaceAwareEnabled = prefs[Keys.FACE_AWARE] ?: true,
+            exportJpegQuality = (prefs[Keys.JPEG_QUALITY] ?: 92).coerceIn(60, 100)
+        )
 
     override suspend fun updateSettings(settings: UserSettings) {
         context.dataStore.edit { prefs ->
@@ -52,7 +53,7 @@ class DataStoreSettingsRepository @Inject constructor(
             prefs[Keys.TARGET] = settings.defaultWallpaperTarget.name
             prefs[Keys.FILL_MODE] = settings.defaultBackgroundFillMode.name
             prefs[Keys.FACE_AWARE] = settings.defaultFaceAwareEnabled
-            prefs[Keys.JPEG_QUALITY] = settings.exportJpegQuality
+            prefs[Keys.JPEG_QUALITY] = settings.exportJpegQuality.coerceIn(60, 100)
         }
     }
 }

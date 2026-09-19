@@ -34,7 +34,8 @@ import com.wallpapercropfixer.domain.model.BackgroundFillMode
 fun FillModeRow(
     selected: BackgroundFillMode,
     onSelect: (BackgroundFillMode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
@@ -43,6 +44,7 @@ fun FillModeRow(
         BackgroundFillMode.entries.forEach { mode ->
             FilterChip(
                 selected = mode == selected,
+                enabled = enabled,
                 onClick = { onSelect(mode) },
                 leadingIcon = { FillSwatch(mode) },
                 label = { Text(stringResource(mode.labelRes())) },

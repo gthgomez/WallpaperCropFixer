@@ -110,6 +110,7 @@ class FakeExportRepository(
     var started: CompletableDeferred<Unit>? = null
     var gate: CompletableDeferred<Unit>? = null
     var failWith: Throwable? = null
+    var failPrefix: String? = null
 
     override suspend fun exportBitmap(
         bitmap: Bitmap,
@@ -119,6 +120,7 @@ class FakeExportRepository(
     ): ExportResult {
         started?.complete(Unit)
         gate?.await()
+        if (failPrefix != null && fileName.startsWith(failPrefix!!)) error("export failed")
         failWith?.let { throw it }
         exported.add(bitmap to fileName)
         return result
