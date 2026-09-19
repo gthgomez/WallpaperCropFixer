@@ -38,6 +38,12 @@ class AndroidDeviceProfileRepository @Inject constructor(
             density = metrics.density
         }
 
+        // OEM services can omit hints or reject access; the domain factory validates them.
+        val desiredSize = runCatching {
+            val wallpaper = WallpaperManager.getInstance(context)
+            wallpaper.desiredMinimumWidth to wallpaper.desiredMinimumHeight
+        }.getOrDefault(0 to 0)
+
         return DeviceProfile(
             manufacturer = Build.MANUFACTURER,
             model = Build.MODEL,
@@ -45,7 +51,9 @@ class AndroidDeviceProfileRepository @Inject constructor(
             screenWidthPx = width,
             screenHeightPx = height,
             density = density,
-            aspectRatio = width.toFloat() / height.toFloat()
+            aspectRatio = width.toFloat() / height.toFloat(),
+            desiredWallpaperWidthPx = desiredSize.first,
+            desiredWallpaperHeightPx = desiredSize.second
         )
     }
 }

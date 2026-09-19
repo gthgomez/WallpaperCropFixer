@@ -83,6 +83,21 @@ class EditorUiStateTest {
         assertEquals(2L, state.latestPublication?.revision)
     }
 
+    @Test
+    fun `quality warning follows actual displayed canvas and snapshot source`() {
+        val state = stateWithPreview(withLock = true, previewingLock = false)
+        val original = state.publishedPreview!!
+        val wideHome = original.home.copy(plan = homePlan.copy(
+            targetCanvasSpec = TargetCanvasSpec(6000, 2400, WallpaperTarget.HOME)))
+        val published = original.copy(home = wideHome)
+        val current = state.copy(publishedPreview = published)
+        org.junit.Assert.assertTrue(current.isLowResolution)
+        assertFalse(current.copy(previewingLock = true).isLowResolution)
+        org.junit.Assert.assertTrue(current.copy(publishedPreview = null,
+            retainedPreview = published, sourceImageMeta = SourceImageMeta("new", 9000, 9000, "image/jpeg")).isLowResolution)
+        assertFalse(EditorUiState().isLowResolution)
+    }
+
     private fun stateWithPreview(withLock: Boolean, previewingLock: Boolean): EditorUiState {
         val preview = PublishedPreview(
             revision = 1L,

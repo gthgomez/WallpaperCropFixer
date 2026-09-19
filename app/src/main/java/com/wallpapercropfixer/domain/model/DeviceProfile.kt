@@ -7,5 +7,7 @@ data class DeviceProfile(
     val screenWidthPx: Int,
     val screenHeightPx: Int,
     val density: Float,
-    val aspectRatio: Float
+    val aspectRatio: Float,
+    val desiredWallpaperWidthPx: Int = 0,
+    val desiredWallpaperHeightPx: Int = 0
 )

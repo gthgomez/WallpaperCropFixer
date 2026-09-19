@@ -51,7 +51,7 @@ class CropStrategySelectorTest {
         val full = com.wallpapercropfixer.domain.model.CropRect(0f, 0f, 1000f, 1000f)
         val selectedSafeFitNoPad = selector.selectCropRect(CropMode.SAFE_FIT, standard, full, usePadding = false)
         val selectedFill = selector.selectCropRect(CropMode.FILL, standard, full, usePadding = false)
-        org.junit.Assert.assertEquals(standard, selectedSafeFitNoPad)
+        org.junit.Assert.assertEquals(full, selectedSafeFitNoPad)
         org.junit.Assert.assertEquals(standard, selectedFill)
     }
 }
