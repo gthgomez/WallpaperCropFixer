@@ -7,7 +7,16 @@ Physical-device certification uses the condensed runbook in
 `docs/release/DEVICE_QA_RUNBOOK.md`; Play Console steps live in
 `docs/release/PLAY_SUBMISSION_CHECKLIST.md`.
 
-## AUTOMATED — VERIFIED
+## RC2 automated candidate — pending
+
+Record candidate SHA, test count, lint reports, artifact paths/SHA-256 and preflight result in the release readiness report after integration. Run the full matrix once on that candidate. No historical check below certifies RC2.
+
+- [ ] `:app:lintDebug :app:lintReleaseVerification :app:testDebugUnitTest :app:assembleDebug :app:assembleReleaseVerification :app:bundleReleaseVerification --no-daemon --stacktrace`
+- [ ] Pinned-tool `tools/release-preflight.ps1` on those artifacts.
+- [ ] Record Settings version/code/source for every physical-device session; screenshots from unknown builds are observations, not current-source proof.
+- [ ] Verify cancellable render navigation, committed Save/Apply navigation blocking and progress ownership; rapid face-aware toggles; partial BOTH export; background availability and Color output.
+
+## Historical RC1 automated record — 2026-09-05
 
 - [x] Local: `:app:testDebugUnitTest`; 57 tests passed, including crop math/property tests, viewport transforms, renderer opacity, image decode bounds, export destinations, Compose semantics, and deterministic ViewModel revision races.
 - [x] Local: `:app:lintDebug` and `:app:lintReleaseVerification`; zero errors.
@@ -19,7 +28,7 @@ Physical-device certification uses the condensed runbook in
 - [x] Local: no tracked `local.properties`, keystore, certificate private key, signing password, `.env`, or test personal data.
 - [x] Source/config review: backup/data-extraction rules include only DataStore preferences and exclude cache/source photos.
 
-## EMULATOR — VERIFIED / BLOCKED
+## RC2 EMULATOR — NOT EXECUTED
 
 - [ ] Launch the verification APK on an API 35/36 emulator.
 - [ ] Exercise entry screen, mocked/test image selection path, editor render, crop mode change, target change, focus tap, Save, and Apply where the emulator supports wallpaper APIs.
@@ -42,7 +51,7 @@ Minimum matrix:
 Also verify with TalkBack, large font/display scaling, dark/system mode, landscape,
 split-screen, tablet/foldable-sized windows, long OEM labels, revoked URI,
 corrupt/unsupported image, insufficient storage, wallpaper policy restriction,
-unsupported lock screen, cancellation during load/render/apply/save, and repeated
+unsupported lock screen, navigation during load/render and blocked navigation during committed apply/save, and repeated
 rapid Apply/Save taps. Capture memory/OOM behavior for 50 MP, 100 MP, extreme
 panorama/tall images, blur backgrounds, HOME+LOCK, and export/apply after render.
 

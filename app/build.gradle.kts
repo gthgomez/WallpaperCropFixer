@@ -5,6 +5,25 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Prefer the checkout itself: GITHUB_SHA may name a different PR/merge commit.
+fun gitOutput(vararg arguments: String): String? = runCatching {
+    providers.exec {
+        workingDir(rootProject.projectDir)
+        commandLine("git", *arguments)
+        isIgnoreExitValue = true
+    }.let { output ->
+        if (output.result.get().exitValue == 0) output.standardOutput.asText.get().trim() else null
+    }
+}.getOrNull()
+val sourceHashPattern = Regex("[0-9a-fA-F]{7,40}")
+val checkoutCommit = gitOutput("rev-parse", "HEAD")?.takeIf { it.matches(sourceHashPattern) }
+val sourceCommit = checkoutCommit
+    ?: listOf("SOURCE_COMMIT", "GITHUB_SHA").firstNotNullOfOrNull { name ->
+        providers.environmentVariable(name).orNull?.takeIf { it.matches(sourceHashPattern) }
+    }
+val sourceRevision = (sourceCommit?.take(12)?.lowercase() ?: "unknown") +
+    if (checkoutCommit != null && !gitOutput("status", "--porcelain", "--untracked-files=normal").isNullOrEmpty()) "-dirty" else ""
+
 val uploadArtifactTasks = setOf("assembleRelease", "bundleRelease", "packageRelease")
 val uploadTaskRequested = gradle.startParameter.taskNames.any { requestedTask ->
     uploadArtifactTasks.any { requestedTask.endsWith(it) }
@@ -42,6 +61,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "SOURCE_COMMIT", "\"$sourceRevision\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // The bundled ML Kit native payload is 16 KB-aligned for these
@@ -94,6 +114,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

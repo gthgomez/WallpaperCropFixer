@@ -1,22 +1,14 @@
-# CLAUDE.md - WallpaperCropFixer
+# CLAUDE.md — WallpaperCropFixer
 
-Agent-neutral startup router for the WallpaperCropFixer Android app. Root `ENGINEERING.md` and root `CLAUDE.md` for general protocols. Refer to root `AGENTS.md` for Gemini-specific overrides.
+Agent-neutral startup guidance. Read [AGENTS.md](AGENTS.md), this file, then [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md). All required instructions live in this repository; local parent-workspace conventions are optional context and cannot override the task.
 
-## Startup Sequence
+## Local rules
 
-1. Read this file (`CLAUDE.md`) — project-local agent guidance.
-2. Read `PROJECT_CONTEXT.md` in this directory — directory map and invariants.
-3. Read `C:\Workspace\Project_Android\PROJECT_CONTEXT.md` — workspace-wide context.
-4. Read `C:\Workspace\Project_Android\CLAUDE.md` — behavioral rules and Android patterns.
-5. Review `C:\Workspace\Project_Android\tasks\lessons.md` if it exists.
+- `PROJECT_CONTEXT.md` is the canonical app-local technical context.
+- This app uses Hilt, DataStore, ML Kit face detection and EXIF handling. Do not substitute a parent workspace's manual-DI convention.
+- Preserve snapshot authority: stale previews may remain visible but must not be eligible for Apply or Save.
+- Preserve EXIF-correct bounded decoding, deterministic blur and separate preview viewing versus Apply destination.
+- Use proportionate verification while developing. Run the complete release matrix only on the integrated candidate unless release-specific work requires it earlier.
+- Physical-device, TalkBack, OEM, privacy-traffic and Play checks remain pending until actually executed.
 
-## Local Rules
-
-- `PROJECT_CONTEXT.md` is the canonical app-local context for all agents.
-- This app uses Hilt, DataStore, ML Kit face detection, and EXIF handling.
-- Do not assume the parent Project_Android "manual DI only" pattern applies here.
-- Treat image crop math, EXIF handling, file/export behavior, and Android manifest changes as high risk.
-
-## Verification
-
-Use the Gradle commands in `PROJECT_CONTEXT.md`. Do not claim Android build/test success unless the command was actually run and passed.
+Run commands from the repository root; see `PROJECT_CONTEXT.md` and `QA_CHECKLIST.md`.
