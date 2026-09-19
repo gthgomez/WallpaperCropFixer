@@ -37,6 +37,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 - **EXIF orientation** is read locally to normalize rotation before cropping.
 - **Face-aware crop** uses **Google ML Kit Face Detection** (`com.google.mlkit:face-detection:16.1.7`) with the **bundled** on-device model shipped within the APK. Image pixels and face-detection results remain on your device and are never uploaded for ML inference.
 - **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDK may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls.
+- **Retention:** The cited ML Kit disclosure does not specify a retention period for this diagnostic metadata, and the application has no mechanism to delete telemetry held by Google. Consult Google's Privacy Policy for the provider's applicable retention practices.
 
 ## Wallpaper and export
 
