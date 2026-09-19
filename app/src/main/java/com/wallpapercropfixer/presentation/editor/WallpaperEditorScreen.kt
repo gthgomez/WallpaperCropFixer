@@ -664,9 +664,9 @@ private fun ControlsCard(state: EditorUiState, callbacks: EditorCallbacks) {
                 Spacer(Modifier.height(8.dp))
                 FillModeRow(
                     selected = state.backgroundFillMode,
-                    enabled = !state.isCommitting,
                     onSelect = callbacks.onFillMode,
-                    enabled = state.isPreviewCurrent && state.displayedPreview?.plan?.usePadding == true && !state.isApplying && !state.isExporting,
+                    enabled = !state.isCommitting &&
+                        state.isPreviewCurrent && state.displayedPreview?.plan?.usePadding == true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(4.dp))
