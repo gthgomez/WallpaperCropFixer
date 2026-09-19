@@ -22,7 +22,7 @@ val sourceCommit = checkoutCommit
         providers.environmentVariable(name).orNull?.takeIf { it.matches(sourceHashPattern) }
     }
 val sourceRevision = (sourceCommit?.take(12)?.lowercase() ?: "unknown") +
-    if (checkoutCommit != null && !gitOutput("status", "--porcelain", "--untracked-files=no").isNullOrEmpty()) "-dirty" else ""
+    if (checkoutCommit != null && !gitOutput("status", "--porcelain", "--untracked-files=normal").isNullOrEmpty()) "-dirty" else ""
 
 val uploadArtifactTasks = setOf("assembleRelease", "bundleRelease", "packageRelease")
 val uploadTaskRequested = gradle.startParameter.taskNames.any { requestedTask ->
