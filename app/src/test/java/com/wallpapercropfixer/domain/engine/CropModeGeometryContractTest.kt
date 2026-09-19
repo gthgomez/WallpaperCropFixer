@@ -214,4 +214,36 @@ class CropModeGeometryContractTest {
         assertTrue(CropMath.cropRemovalFraction(2000, 6000, plan.sourceCropRect) <= 0.35001f)
         assertTrue(plan.usePadding)
     }
+
+    @Test
+    fun `Balanced face inclusion honors every crop boundary in both orientations`() {
+        for (landscape in listOf(false, true)) {
+            for (removed in listOf(349, 350, 351)) {
+                val sourceW = if (landscape) 2000 else 1000
+                val sourceH = if (landscape) 1000 else 2000
+                val targetW = if (landscape) sourceW else sourceW - removed
+                val targetH = if (landscape) sourceH - removed else sourceH
+                val face = if (landscape) {
+                    FaceBounds(0f, 0f, 120f, 120f)
+                } else {
+                    FaceBounds(0f, 0f, 120f, 120f)
+                }
+                val plan = engine.buildPlan(
+                    request(sourceW, sourceH, CropMode.BALANCED).copy(
+                        deviceProfile = device.copy(screenWidthPx = targetW, screenHeightPx = targetH),
+                        manualFocusPoint = FocusPoint(0.5f, 0.5f),
+                        enableFaceAwareFocus = true
+                    ),
+                    SubjectAnalysis(listOf(face), null)
+                )
+                val crop = plan.sourceCropRect
+                assertTrue("face must remain inside the crop", crop.left <= face.left && crop.top <= face.top)
+                assertTrue("face must remain inside the crop", crop.right >= face.right && crop.bottom >= face.bottom)
+                assertTrue(
+                    "face-inclusive Balanced crop must remain within the 35% budget",
+                    CropMath.cropRemovalFraction(sourceW, sourceH, crop) <= 0.35001f
+                )
+            }
+        }
+    }
 }

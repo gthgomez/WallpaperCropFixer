@@ -67,7 +67,12 @@ class WallpaperCropEngineImpl @Inject constructor(
             request.cropMode, standardCropRect, fullSourceRect, paddingRequested,
             if (request.enableFaceAwareFocus) subjectAnalysis?.faces.orEmpty() else emptyList()
         )
-        val usePadding = kotlin.math.abs(chosenCropRect.width / chosenCropRect.height - targetRatio) > 0.000001f
+        // Compare aspect ratios with Double cross-products. A coarse float
+        // epsilon can classify a genuine near-match as equal and stretch the
+        // complete Safe Fit source instead of preserving its aspect ratio.
+        val usePadding = paddingRequested &&
+            chosenCropRect.width.toDouble() * canvasSpec.heightPx.toDouble() !=
+            chosenCropRect.height.toDouble() * canvasSpec.widthPx.toDouble()
 
         // When padding is used, the image occupies a sub-region of the canvas.
         // When not padding, the image fills the entire canvas after crop.
