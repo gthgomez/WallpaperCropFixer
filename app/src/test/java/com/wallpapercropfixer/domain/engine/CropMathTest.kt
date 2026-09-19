@@ -118,13 +118,6 @@ class CropMathTest {
         assertEquals(50f, placement.height, tolerance)
     }
 
-    // ── SAFE_FIT_PADDING_THRESHOLD ────────────────────────────────────────────
-
-    @Test
-    fun `safe fit threshold is 0_20`() {
-        assertEquals(0.20f, CropMath.SAFE_FIT_PADDING_THRESHOLD, tolerance)
-    }
-
     // ── Focus Coordinate Transforms ──────────────────────────────────────────
 
     @Test

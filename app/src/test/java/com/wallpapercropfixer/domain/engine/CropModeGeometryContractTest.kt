@@ -1,5 +1,8 @@
 package com.wallpapercropfixer.domain.engine
 
+import com.wallpapercropfixer.core.math.CropMath
+import com.wallpapercropfixer.domain.model.FaceBounds
+import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.model.BackgroundFillMode
 import com.wallpapercropfixer.domain.model.CropMode
 import com.wallpapercropfixer.domain.model.DeviceProfile
@@ -14,21 +17,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Pins the crop-mode geometry contract that the UI copy depends on.
- *
- * These tests document (and guard against drift of) the real behavior:
- *  - SAFE_FIT only pads when a standard crop would remove > 20% of the source
- *    area or clip a detected face. Light crops still crop.
- *  - BALANCED pads only above 40% removal, but pads with the *standard* crop
- *    rect. When that rect already matches the canvas aspect, the padded
- *    placement fills the whole canvas and no background is visible, even
- *    though [WallpaperRenderPlan.usePadding] is true.
- *  - FILL never pads.
- *
- * UI copy must not promise "no cropping" for SAFE_FIT, and the background
- * finish control is only meaningful when the plan actually exposes padding.
- */
+/** Whole-photo Safe Fit, bounded Balanced cropping, unrestricted Fill. */
 class CropModeGeometryContractTest {
 
     private val engine = WallpaperCropEngineImpl(
@@ -87,7 +76,7 @@ class CropModeGeometryContractTest {
     }
 
     @Test
-    fun `SAFE_FIT pads only past the removal threshold`() {
+    fun `SAFE_FIT preserves all source area for large aspect differences`() {
         // 2000x2000 into a 1:2 canvas: crop to 1000x2000 removes 50% -> full photo + padding.
         val plan = engine.buildPlan(request(2000, 2000, CropMode.SAFE_FIT), null)
 
@@ -127,5 +116,134 @@ class CropModeGeometryContractTest {
         assertEquals(focus, plan.finalFocusPoint)
         // A left-biased focus must bias the crop rect toward the left half.
         assertTrue("crop must be biased toward the manual focus", plan.sourceCropRect.left < 500f)
+    }
+
+    @Test
+    fun `Balanced stays continuous across 349 350 and 351 per mille in both orientations`() {
+        for (landscape in listOf(false, true)) {
+            for (removed in listOf(349, 350, 351)) {
+                val sourceW = if (landscape) 2000 else 1000
+                val sourceH = if (landscape) 1000 else 2000
+                val targetW = if (landscape) sourceW else 1000 - removed
+                val targetH = if (landscape) 1000 - removed else sourceH
+                val req = request(sourceW, sourceH, CropMode.BALANCED).copy(
+                    deviceProfile = device.copy(screenWidthPx = targetW, screenHeightPx = targetH),
+                    manualFocusPoint = FocusPoint(0.1f, 0.9f)
+                )
+                val plan = engine.buildPlan(req, null)
+                val removal = CropMath.cropRemovalFraction(sourceW, sourceH, plan.sourceCropRect)
+                assertEquals(minOf(removed / 1000f, 0.35f), removal, 0.00001f)
+                assertTrue(removal <= 0.35f + 0.00001f)
+                assertEquals(removed > 350, plan.usePadding)
+                if (landscape) assertEquals(sourceH.toFloat(), plan.sourceCropRect.bottom, 0.001f)
+                else assertEquals(0f, plan.sourceCropRect.left, 0.001f)
+            }
+        }
+    }
+
+    @Test
+    fun `Balanced expands toward edge faces without exceeding removal budget`() {
+        for ((w, h) in listOf(4000 to 3000, 2000 to 6000)) {
+            val faces = listOf(FaceBounds(0f, 0f, 100f, 100f),
+                FaceBounds(w - 100f, h - 100f, w.toFloat(), h.toFloat()))
+            val plan = engine.buildPlan(
+                request(w, h, CropMode.BALANCED).copy(enableFaceAwareFocus = true,
+                    manualFocusPoint = FocusPoint(0.2f, 0.8f)),
+                SubjectAnalysis(faces, null)
+            )
+            for (face in faces) {
+                assertTrue(plan.sourceCropRect.left <= face.left)
+                assertTrue(plan.sourceCropRect.top <= face.top)
+                assertTrue(plan.sourceCropRect.right >= face.right)
+                assertTrue(plan.sourceCropRect.bottom >= face.bottom)
+            }
+            assertTrue(CropMath.cropRemovalFraction(w, h, plan.sourceCropRect) <= 0.35001f)
+        }
+    }
+    @Test
+    fun `Balanced face expansion keeps a partial crop when whole photo is unnecessary`() {
+        val face = FaceBounds(3500f, 1000f, 3800f, 1500f)
+        val plan = engine.buildPlan(
+            request(4000, 3000, CropMode.BALANCED).copy(enableFaceAwareFocus = true,
+                manualFocusPoint = FocusPoint(0.5f, 0.5f)),
+            SubjectAnalysis(listOf(face), null)
+        )
+        assertTrue(plan.sourceCropRect.right >= face.right)
+        assertTrue(plan.sourceCropRect.width < 4000f)
+        assertTrue(CropMath.cropRemovalFraction(4000, 3000, plan.sourceCropRect) <= 0.35001f)
+        assertTrue(plan.usePadding)
+    }
+
+    @Test
+    fun `Safe Fit preserves photo even for sub-per-mille aspect differences`() {
+        val plan = engine.buildPlan(request(1001, 2000, CropMode.SAFE_FIT), null)
+        assertEquals(1001f, plan.sourceCropRect.width, 0f)
+        assertEquals(2000f, plan.sourceCropRect.height, 0f)
+        assertTrue(plan.usePadding)
+    }
+    @Test
+    fun `Balanced budget and source bounds hold across varied sources focus and canvases`() {
+        val random = kotlin.random.Random(352026)
+        repeat(500) {
+            val w = random.nextInt(100, 30000)
+            val h = random.nextInt(100, 30000)
+            val plan = engine.buildPlan(request(w, h, CropMode.BALANCED).copy(
+                deviceProfile = device.copy(screenWidthPx = random.nextInt(100, 3000),
+                    screenHeightPx = random.nextInt(100, 4000)),
+                manualFocusPoint = FocusPoint(random.nextFloat(), random.nextFloat())
+            ), null)
+            val crop = plan.sourceCropRect
+            assertTrue(CropMath.cropRemovalFraction(w, h, crop) <= 0.35001f)
+            assertTrue(crop.left >= 0f && crop.top >= 0f)
+            assertTrue(crop.right <= w + 0.01f && crop.bottom <= h + 0.01f)
+            assertTrue(crop.width > 0f && crop.height > 0f)
+        }
+    }
+    @Test
+    fun `Balanced expands a vertical crop for a portrait edge face while retaining partial framing`() {
+        val face = FaceBounds(800f, 5600f, 1200f, 5900f)
+        val plan = engine.buildPlan(
+            request(2000, 6000, CropMode.BALANCED).copy(enableFaceAwareFocus = true,
+                manualFocusPoint = FocusPoint(0.5f, 0.5f)),
+            SubjectAnalysis(listOf(face), null)
+        )
+        // Standard vertical crop ends at y=5000; the face requires expansion.
+        assertTrue(plan.sourceCropRect.bottom >= face.bottom)
+        assertTrue(plan.sourceCropRect.top > 0f)
+        assertTrue(plan.sourceCropRect.height < 6000f)
+        assertTrue(CropMath.cropRemovalFraction(2000, 6000, plan.sourceCropRect) <= 0.35001f)
+        assertTrue(plan.usePadding)
+    }
+
+    @Test
+    fun `Balanced face inclusion honors every crop boundary in both orientations`() {
+        for (landscape in listOf(false, true)) {
+            for (removed in listOf(349, 350, 351)) {
+                val sourceW = if (landscape) 2000 else 1000
+                val sourceH = if (landscape) 1000 else 2000
+                val targetW = if (landscape) sourceW else sourceW - removed
+                val targetH = if (landscape) sourceH - removed else sourceH
+                val face = if (landscape) {
+                    FaceBounds(0f, 0f, 120f, 120f)
+                } else {
+                    FaceBounds(0f, 0f, 120f, 120f)
+                }
+                val plan = engine.buildPlan(
+                    request(sourceW, sourceH, CropMode.BALANCED).copy(
+                        deviceProfile = device.copy(screenWidthPx = targetW, screenHeightPx = targetH),
+                        manualFocusPoint = FocusPoint(0.5f, 0.5f),
+                        enableFaceAwareFocus = true
+                    ),
+                    SubjectAnalysis(listOf(face), null)
+                )
+                val crop = plan.sourceCropRect
+                assertTrue("face must remain inside the crop", crop.left <= face.left && crop.top <= face.top)
+                assertTrue("face must remain inside the crop", crop.right >= face.right && crop.bottom >= face.bottom)
+                assertTrue(
+                    "face-inclusive Balanced crop must remain within the 35% budget",
+                    CropMath.cropRemovalFraction(sourceW, sourceH, crop) <= 0.35001f
+                )
+            }
+        }
     }
 }

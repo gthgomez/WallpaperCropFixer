@@ -110,14 +110,14 @@ data class EditorUiState(
 
     /**
      * True when source image resolution is too low for the target canvas (< 80% of target
-     * in either dimension), which would force upscaling beyond the 110% fidelity limit.
+     * in either dimension). Uses the displayed snapshot so source and canvas stay paired.
      */
     val isLowResolution: Boolean
         get() {
-            val meta = sourceImageMeta ?: return false
-            val profile = deviceProfile ?: return false
-            val targetW = profile.screenWidthPx
-            val targetH = profile.screenHeightPx
+            val render = displayedPreview ?: return false
+            val meta = render.request.source
+            val targetW = render.plan.targetCanvasSpec.widthPx
+            val targetH = render.plan.targetCanvasSpec.heightPx
             return meta.width < targetW * 0.8f || meta.height < targetH * 0.8f
         }
 

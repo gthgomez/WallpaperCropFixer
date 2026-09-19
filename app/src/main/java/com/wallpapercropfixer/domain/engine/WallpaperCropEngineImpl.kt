@@ -62,8 +62,17 @@ class WallpaperCropEngineImpl @Inject constructor(
         } else false
 
         val fullSourceRect = CropRect(0f, 0f, request.source.width.toFloat(), request.source.height.toFloat())
-        val usePadding = strategySelector.shouldUsePadding(request.cropMode, removalFraction, hasClippedFaces)
-        val chosenCropRect = strategySelector.selectCropRect(request.cropMode, standardCropRect, fullSourceRect, usePadding)
+        val paddingRequested = strategySelector.shouldUsePadding(request.cropMode, removalFraction, hasClippedFaces)
+        val chosenCropRect = strategySelector.selectCropRect(
+            request.cropMode, standardCropRect, fullSourceRect, paddingRequested,
+            if (request.enableFaceAwareFocus) subjectAnalysis?.faces.orEmpty() else emptyList()
+        )
+        // Compare aspect ratios with Double cross-products. A coarse float
+        // epsilon can classify a genuine near-match as equal and stretch the
+        // complete Safe Fit source instead of preserving its aspect ratio.
+        val usePadding = paddingRequested &&
+            chosenCropRect.width.toDouble() * canvasSpec.heightPx.toDouble() !=
+            chosenCropRect.height.toDouble() * canvasSpec.widthPx.toDouble()
 
         // When padding is used, the image occupies a sub-region of the canvas.
         // When not padding, the image fills the entire canvas after crop.

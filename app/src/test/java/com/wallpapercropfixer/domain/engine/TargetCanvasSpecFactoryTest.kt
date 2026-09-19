@@ -47,4 +47,35 @@ class TargetCanvasSpecFactoryTest {
         val specHome = factory.create(device, behavior, WallpaperTarget.HOME)
         assertEquals(specHome.widthPx, specBoth.widthPx)
     }
+
+    @Test
+    fun `valid Android hints override OEM HOME sizing including height`() {
+        val hinted = device.copy(desiredWallpaperWidthPx = 2880, desiredWallpaperHeightPx = 3200)
+        for (target in listOf(WallpaperTarget.HOME, WallpaperTarget.BOTH)) {
+            val canvas = factory.create(hinted, behavior, target)
+            assertEquals(2880, canvas.widthPx)
+            assertEquals(3200, canvas.heightPx)
+        }
+        val lock = factory.create(hinted, behavior.copy(lockWidthMultiplier = 2f), WallpaperTarget.LOCK)
+        assertEquals(1440, lock.widthPx)
+        assertEquals(3120, lock.heightPx)
+    }
+
+    @Test
+    fun `absent undersized overflowing and excessive hints fall back to OEM`() {
+        for ((w, h) in listOf(0 to 0, -1 to 3120, 2880 to 0, 1000 to 3120,
+            2880 to 2000, Int.MAX_VALUE to Int.MAX_VALUE, 8192 to 8192, 9000 to 3120)) {
+            val canvas = factory.create(device.copy(desiredWallpaperWidthPx = w,
+                desiredWallpaperHeightPx = h), behavior, WallpaperTarget.HOME)
+            assertEquals((1440 * 1.12f).toInt(), canvas.widthPx)
+            assertEquals(3120, canvas.heightPx)
+        }
+    }
+    @Test
+    fun `unknown OEM without valid hints uses generic fallback`() {
+        val generic = com.wallpapercropfixer.data.behavior.KnownWallpaperProfiles.matchBrand("unknown")
+        val canvas = factory.create(device, generic, WallpaperTarget.HOME)
+        assertEquals((1440 * 1.10f).toInt(), canvas.widthPx)
+        assertEquals(3120, canvas.heightPx)
+    }
 }

@@ -177,12 +177,6 @@ object CropMath {
     }
 
     /**
-     * Computes the crop fraction threshold above which Safe Fit mode prefers padding.
-     * Exposed as a constant so tests can assert against it.
-     */
-    const val SAFE_FIT_PADDING_THRESHOLD = 0.20f
-
-    /**
      * Center FocusPoint convenience.
      */
     val CENTER_FOCUS = FocusPoint(0.5f, 0.5f)

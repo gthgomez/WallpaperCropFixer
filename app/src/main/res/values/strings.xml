@@ -59,15 +59,15 @@
         <item quantity="other">%1$d faces detected</item>
     </plurals>
 
-    <!-- Crop modes. Safe Fit wording is deliberately accurate: it only pads when a
-         crop would remove >20% of the photo (or clip a face); light crops still crop. -->
+    <!-- Crop modes. Safe Fit preserves the complete source photo and pads when
+         the source and target aspect ratios differ. -->
     <string name="crop_mode_safe_fit">Safe Fit</string>
     <string name="crop_mode_balanced">Balanced</string>
     <string name="crop_mode_fill">Fill</string>
     <string name="crop_mode_safe_fit_desc">Fewer cuts · pads when needed</string>
     <string name="crop_mode_balanced_desc">Balanced coverage</string>
     <string name="crop_mode_fill_desc">Fills screen · may crop</string>
-    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — trims a little, and pads the background instead of cutting away much of the photo</string>
+    <string name="crop_mode_safe_fit_a11y">Crop mode: Safe Fit — preserves the whole photo and pads the background when aspect ratios differ</string>
     <string name="crop_mode_balanced_a11y">Crop mode: Balanced — balances coverage and subject preservation</string>
     <string name="crop_mode_fill_a11y">Crop mode: Fill — covers the entire screen, may crop edges</string>
 

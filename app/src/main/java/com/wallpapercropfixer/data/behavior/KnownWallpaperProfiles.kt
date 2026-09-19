@@ -4,9 +4,9 @@ import com.wallpapercropfixer.domain.model.WallpaperBehaviorProfile
 
 /**
  * Seed profiles. These are best-effort estimates of OEM launcher behavior —
- * not guaranteed to match every device or launcher version. They are used only
- * to size the rendered canvas; the launcher ultimately decides how a wallpaper
- * is displayed (see PRIVACY/QA docs for the "optimize framing" guidance).
+ * not guaranteed to match every device or launcher version. HOME uses these
+ * only when Android desired dimensions are unavailable or invalid. The launcher
+ * ultimately decides how a wallpaper is displayed.
  */
 object KnownWallpaperProfiles {
 

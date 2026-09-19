@@ -10,27 +10,27 @@ Asset specs verified (feature graphic 1024×500; ≥2 screenshots, PNG/JPEG, 16:
 | App name (30 max) | `Wallpaper Crop Fixer` | 20/30 |
 | Short description (80 max) | `Preview how your photo fits home and lock screens before you set it. No ads.` | 76/80 |
 
-## 2. Full description (4000 max) — copy below measured at 1708 chars, large headroom for owner edits
+## 2. Full description (4000 max) — copy below measured at 2003 chars, large headroom for owner edits
 
 ```
 Android crops and zooms your photos in unpredictable ways when you set them as wallpapers. A picture that looked great in your gallery can end up framed badly, with faces or details cut off.
 
-Wallpaper Crop Fixer shows you a true-proportion preview of exactly how your photo will fit before anything is applied. A phone-shaped frame displays the real crop — three taps from open to applied.
+Wallpaper Crop Fixer lets you preview the rendered framing before you apply it. A phone-shaped frame helps you compare your choices; the launcher may crop or zoom the final wallpaper differently.
 
 • Tap to position: move the crop focus where you want it. Manual positioning comes first, with automatic face-detected framing and center as defaults.
 • Home, Lock, or Both: choose which screen to set, and preview each surface before you apply.
-• Three crop modes: Safe Fit letterboxes when more than 20% of your photo would be cropped; Balanced allows a tighter crop up to 40%; Fill never letterboxes.
-• Letterbox backgrounds: when a mode adds padding, the padding is filled with a blurred version of your photo.
-• Export: save the fitted image to Pictures/WallpaperCropFixer for reuse.
+• Three crop modes: Safe Fit keeps the entire photo and adds background when aspect ratios differ; Balanced removes at most 35% of source area for framing and adds background when needed; Fill covers the canvas and may crop edges.
+• Letterbox backgrounds: when a mode adds padding, choose Blur, a photo-derived Color, or Gradient.
+• Export: save the fitted image to Pictures/WallpaperCropFixer on Android 10+, or an app-specific folder on older versions.
 
-Privacy by design: your photos never leave your device. Everything runs on your phone — face detection is bundled in the app and executes on-device. No ads. No analytics. No tracking. No accounts. The app requests a single permission: setting your wallpaper.
+Privacy by design: your photos never leave your device. Everything runs on your phone — face detection is bundled in the app and executes on-device. No ads or accounts. Google ML Kit may collect diagnostic and performance metadata, as disclosed in the privacy policy. The app uses the wallpaper permission and SDK network permissions; it does not request broad photo-library access.
 
-A note on honesty: Android manufacturers handle wallpaper canvases differently (for example, home-screen parallax on Samsung and Pixel devices). Wallpaper Crop Fixer estimates this behavior as best it can, but exact scaling on every device is not guaranteed. Low-resolution images may appear pixelated, and the app warns you when that is likely.
+A note on honesty: Android manufacturers handle wallpaper canvases differently (for example, home-screen parallax on Samsung and Pixel devices). Wallpaper Crop Fixer uses Android system sizing hints when valid and bounded, with device-profile estimates as fallback. Exact launcher scaling on every device is not guaranteed. Low-resolution images may appear pixelated, and the app warns you when that is likely.
 
 If you have ever set a wallpaper and been surprised by the crop, try Wallpaper Crop Fixer — see it before you set it.
 ```
 
-Guardrails honored: no superlatives ("perfectly", "best"), no unverifiable claims — every feature sentence maps to a code-audited fact; OEM limitation disclosed up front.
+Guardrails honored: no superlatives ("perfectly", "best"), no unverifiable optimization or exact-launcher promises; draft remains subject to owner approval and physical QA.
 
 ## 3. Category & tags
 - Category: **Personalization** (OWNER_MUST_CONFIRM: confirm picker shows it).
