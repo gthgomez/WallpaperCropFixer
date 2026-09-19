@@ -2,7 +2,32 @@
 
 ## Current RC2 preparation — 2026-09-19
 
-Starting live main: `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc`. Current work is post-RC1. Candidate SHA, test count, lint result, artifact paths/hashes and preflight result are **PENDING integrated certification**. No RC2 tag has been created.
+Starting live main: `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc`. Current work is post-RC1. The integrated candidate record below contains the final gate, artifact and preflight evidence. No RC2 tag has been created.
+
+## Integrated RC2 candidate certification record
+
+Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (the integrated code and documentation state used for the final gate). No RC2 tag has been created.
+
+The mandated final matrix passed on Windows/JDK 17:
+
+```text
+:app:lintDebug                         PASS
+:app:lintReleaseVerification           PASS
+:app:testDebugUnitTest                 PASS (112 tests, 0 failures, 0 errors, 0 skipped)
+:app:assembleDebug                     PASS
+:app:assembleReleaseVerification      PASS
+:app:bundleReleaseVerification        PASS
+```
+
+Artifacts from that candidate build:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `app/build/outputs/apk/debug/app-debug.apk` | 46,349,446 | `E0340AACBDE5C6088E6E47C761B3948241AC9F05138EA7958762DB2E44A13385` |
+| `app/build/outputs/apk/releaseVerification/app-releaseVerification.apk` | 24,625,516 | `03511B9C5926148B1936E6A4BD8E7F89FC930CEA0E17F77167B54EDD146E7846` |
+| `app/build/outputs/bundle/releaseVerification/app-releaseVerification.aab` | 15,351,433 | `169D4CDF0A9CA44015DFEA6B4CF9A73E7662C6997A108B06E2E4C0D74B61EC55` |
+
+Pinned release preflight passed with bundletool 1.18.3 and gitleaks 8.24.3, including APK ZIP alignment, AAB 16 KB page alignment, all six packaged native ELF files, permissions, dependency policy and secrets scan. Its privacy-contact, public-URL, runtime-privacy and wallpaper-behavior lines remain owner/device actions by design.
 
 Physical S25 Ultra QA, secondary Pixel-class QA, TalkBack, privacy traffic capture and Play Console validation are **NOT EXECUTED for RC2**. Build Settings provenance must accompany new device evidence. Do not infer current behavior from screenshots lacking an installed source revision.
 

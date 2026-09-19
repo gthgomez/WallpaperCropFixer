@@ -1,6 +1,6 @@
 # Wallpaper Crop Fixer — Play Release Packet
 
-Status: post-RC1 engineering packet for RC2 preparation. Candidate evidence is recorded in [the release readiness report](release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md). This document is not evidence that a Play
+Status: post-RC1 engineering packet for RC2 preparation. Integrated candidate source SHA `6fc6972a151a97d59dabcb20f02868ac1e151ca0` passed the repository code gates; physical-device and Play evidence remain pending. Candidate evidence is recorded in [the release readiness report](release/WALLPAPERCROPFIXER_RELEASE_READINESS_REPORT.md). This document is not evidence that a Play
 upload or physical-device test occurred.
 
 ## App identity
