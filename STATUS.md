@@ -44,7 +44,7 @@ Branch protection was configured during the RC2 campaign to require `Build, lint
 
 ## Integrated candidate evidence
 
-- Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (embedded in the certified artifacts); documentation certification commit: `d19ce9cbccaaea9fcda8bdc0d81efab33159e75c`.
+- Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (embedded in the certified artifacts). Later certification commits change release records only; they do not change artifact source provenance.
 - Final matrix: lintDebug, lintReleaseVerification, 112 unit tests, assembleDebug, assembleReleaseVerification and bundleReleaseVerification all PASS.
 - Pinned release preflight: PASS with expected owner/device action lines; artifact hashes and paths are recorded in the release readiness report.
 
