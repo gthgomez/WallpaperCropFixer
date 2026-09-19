@@ -314,14 +314,20 @@ class EditorViewModelConcurrencyTest {
         vm.setCropMode(CropMode.FILL)
         assertFalse("queued refresh must withdraw old geometry while metrics are gated",
             vm.uiState.value.isPreviewCurrent)
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        vm.refreshForConfigurationChange()
         deviceRepository.gate!!.complete(Unit)
         waitForCondition {
-            deviceRepository.calls >= 2 &&
+            deviceRepository.calls >= 3 &&
                 vm.uiState.value.isPreviewCurrent &&
                 !vm.uiState.value.isBusy
         }
 
-        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
     }
 
     @Test
@@ -367,6 +373,62 @@ class EditorViewModelConcurrencyTest {
         }
 
         assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
+
+    @Test
+    fun `failed configuration refresh keeps stale geometry ineligible until retry refreshes metrics`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.failuresRemaining = 1
+        vm.refreshForConfigurationChange()
+        waitForCondition {
+            deviceRepository.calls >= 2 &&
+                vm.uiState.value.renderFailed &&
+                !vm.uiState.value.isBusy
+        }
+
+        assertNull(vm.uiState.value.publishedPreview)
+        vm.retryRender()
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+        assertTrue("retry must perform a second device lookup", deviceRepository.calls >= 3)
+    }
+
+    @Test
+    fun `editing after failed configuration refresh cannot publish old metrics`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val vm = buildEditorViewModel(deviceProfileRepository = deviceRepository)
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.failuresRemaining = 1
+        vm.refreshForConfigurationChange()
+        waitForCondition { vm.uiState.value.renderFailed && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1600,
+            screenHeightPx = 2560,
+            aspectRatio = 1600f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.setCropMode(CropMode.FILL)
+        waitForCondition { deviceRepository.calls >= 3 }
+        assertFalse("editing must wait for refreshed metrics after failure",
+            vm.uiState.value.isPreviewCurrent)
+
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        assertEquals(1600, vm.uiState.value.deviceProfile?.screenWidthPx)
     }
 
     @Test

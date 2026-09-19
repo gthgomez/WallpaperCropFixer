@@ -93,6 +93,8 @@ class EditorViewModel @Inject constructor(
     private var pendingConfigurationRefresh = false
     @Volatile
     private var configurationRefreshInFlight = false
+    @Volatile
+    private var configurationRefreshFailed = false
     private val faceAnalysisGeneration = AtomicInteger(0)
 
     private val publishedRevision = AtomicLong(0L)
@@ -178,6 +180,7 @@ class EditorViewModel @Inject constructor(
         previewGeneration.incrementAndGet()
         ++applyOperationToken
         ++exportOperationToken
+        configurationRefreshFailed = false
         previewJob?.cancel()
         loadJob?.cancel()
 
@@ -329,6 +332,10 @@ class EditorViewModel @Inject constructor(
     /** Re-runs the render for the current selection after a failure. */
     fun retryRender() {
         if (_uiState.value.sourceImageMeta == null || _uiState.value.isBusy) return
+        if (configurationRefreshFailed) {
+            refreshForConfigurationChange()
+            return
+        }
         generatePreview()
     }
 
@@ -344,8 +351,12 @@ class EditorViewModel @Inject constructor(
             }
             pendingConfigurationRefresh = false
             if (_uiState.value.sourceImageMeta == null || _uiState.value.isLoading) return
-            if (configurationRefreshInFlight) return
+            if (configurationRefreshInFlight) {
+                pendingConfigurationRefresh = true
+                return
+            }
             configurationRefreshInFlight = true
+            configurationRefreshFailed = false
             invalidatePublishedPreview()
         }
         startConfigurationRefresh()
@@ -354,27 +365,49 @@ class EditorViewModel @Inject constructor(
     /** Starts a configuration refresh after its publication gate has been closed. */
     private fun startConfigurationRefresh(preserveOutcome: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
+            try {
                 val deviceProfile = getDeviceProfile()
                 val behaviorProfile = resolveBehavior(deviceProfile)
+                var requery = false
                 withContext(Dispatchers.Main.immediate) {
                     synchronized(configurationRefreshLock) {
                         if (_uiState.value.isCommitting) {
                             pendingConfigurationRefresh = true
                             configurationRefreshInFlight = false
-                            return@synchronized
+                        } else if (pendingConfigurationRefresh) {
+                            // A newer configuration event arrived while this lookup was
+                            // suspended. Re-query before publishing any geometry.
+                            pendingConfigurationRefresh = false
+                            requery = true
+                        } else {
+                            _uiState.update { it.copy(deviceProfile = deviceProfile, behaviorProfile = behaviorProfile) }
+                            configurationRefreshInFlight = false
+                            configurationRefreshFailed = false
+                            generatePreview(preserveOutcome = preserveOutcome)
                         }
-                        _uiState.update { it.copy(deviceProfile = deviceProfile, behaviorProfile = behaviorProfile) }
-                        configurationRefreshInFlight = false
-                        generatePreview(preserveOutcome = preserveOutcome)
                     }
                 }
-            }.onFailure { Logger.e("refreshForConfigurationChange failed", it) }
+                if (requery) startConfigurationRefresh(preserveOutcome)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                synchronized(configurationRefreshLock) {
+                    pendingConfigurationRefresh = false
+                    configurationRefreshInFlight = false
+                    configurationRefreshFailed = true
+                    _uiState.update { it.copy(isRendering = false, renderFailed = true) }
+                }
+                Logger.e("refreshForConfigurationChange failed", t)
+            }
         }
     }
 
     fun generatePreview(preserveOutcome: Boolean = false) {
         if (_uiState.value.isCommitting || configurationRefreshInFlight) return
+        if (configurationRefreshFailed) {
+            refreshForConfigurationChange()
+            return
+        }
         val state = _uiState.value
         val source = state.sourceImageMeta ?: return
         val device = state.deviceProfile ?: return

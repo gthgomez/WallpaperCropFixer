@@ -58,12 +58,18 @@ class FakeSettingsRepository : SettingsRepository {
 class FakeDeviceProfileRepository : DeviceProfileRepository {
     var profile = DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
     var gate: CompletableDeferred<Unit>? = null
+    var failuresRemaining = 0
     @Volatile var calls = 0
 
     override suspend fun getCurrentDeviceProfile(): DeviceProfile {
         calls++
+        val profileAtCall = profile
         gate?.await()
-        return profile
+        if (failuresRemaining > 0) {
+            failuresRemaining--
+            error("synthetic device profile failure")
+        }
+        return profileAtCall
     }
 }
 
