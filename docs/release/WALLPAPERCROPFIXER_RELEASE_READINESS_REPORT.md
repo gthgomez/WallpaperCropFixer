@@ -6,7 +6,7 @@ Starting live main: `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc`. Current work is 
 
 ## Integrated RC2 candidate certification record
 
-Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (the integrated code and documentation state used for the final gate). No RC2 tag has been created.
+Candidate source SHA: `6fc6972a151a97d59dabcb20f02868ac1e151ca0` (embedded in the certified artifacts). Documentation certification commit: `d19ce9cbccaaea9fcda8bdc0d81efab33159e75c`; it changes release records only and does not change the artifact source. No RC2 tag has been created.
 
 The mandated final matrix passed on Windows/JDK 17:
 
