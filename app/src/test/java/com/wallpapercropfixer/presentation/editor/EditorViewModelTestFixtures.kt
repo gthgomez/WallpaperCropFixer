@@ -59,14 +59,15 @@ class FakeDeviceProfileRepository : DeviceProfileRepository {
     var profile = DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
     var gate: CompletableDeferred<Unit>? = null
     var failuresRemaining = 0
+    val failuresAtCall: MutableSet<Int> = ConcurrentHashMap.newKeySet()
     @Volatile var calls = 0
 
     override suspend fun getCurrentDeviceProfile(): DeviceProfile {
-        calls++
+        val callNumber = ++calls
         val profileAtCall = profile
         gate?.await()
-        if (failuresRemaining > 0) {
-            failuresRemaining--
+        if (callNumber in failuresAtCall || failuresRemaining > 0) {
+            if (failuresRemaining > 0) failuresRemaining--
             error("synthetic device profile failure")
         }
         return profileAtCall
