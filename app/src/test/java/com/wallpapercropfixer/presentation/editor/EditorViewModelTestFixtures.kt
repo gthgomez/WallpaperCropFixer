@@ -56,8 +56,15 @@ class FakeSettingsRepository : SettingsRepository {
 }
 
 class FakeDeviceProfileRepository : DeviceProfileRepository {
-    override suspend fun getCurrentDeviceProfile(): DeviceProfile =
-        DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
+    var profile = DeviceProfile("test", "phone", 35, 1080, 2400, 2.75f, 1080f / 2400f)
+    var gate: CompletableDeferred<Unit>? = null
+    @Volatile var calls = 0
+
+    override suspend fun getCurrentDeviceProfile(): DeviceProfile {
+        calls++
+        gate?.await()
+        return profile
+    }
 }
 
 class FakeBehaviorRepository : WallpaperBehaviorRepository {

@@ -89,7 +89,10 @@ class EditorViewModel @Inject constructor(
     private var previewJob: Job? = null
     private var loadJob: Job? = null
     private var faceAnalysisJob: Job? = null
+    private val configurationRefreshLock = Any()
     private var pendingConfigurationRefresh = false
+    @Volatile
+    private var configurationRefreshInFlight = false
     private val faceAnalysisGeneration = AtomicInteger(0)
 
     private val publishedRevision = AtomicLong(0L)
@@ -334,31 +337,44 @@ class EditorViewModel @Inject constructor(
      * preview against the current selection.
      */
     fun refreshForConfigurationChange() {
-        if (_uiState.value.isCommitting) {
-            pendingConfigurationRefresh = true
-            return
+        synchronized(configurationRefreshLock) {
+            if (_uiState.value.isCommitting) {
+                pendingConfigurationRefresh = true
+                return
+            }
+            pendingConfigurationRefresh = false
+            if (_uiState.value.sourceImageMeta == null || _uiState.value.isLoading) return
+            if (configurationRefreshInFlight) return
+            configurationRefreshInFlight = true
+            invalidatePublishedPreview()
         }
-        pendingConfigurationRefresh = false
-        if (_uiState.value.sourceImageMeta == null || _uiState.value.isLoading) return
-        invalidatePublishedPreview()
+        startConfigurationRefresh()
+    }
+
+    /** Starts a configuration refresh after its publication gate has been closed. */
+    private fun startConfigurationRefresh(preserveOutcome: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val deviceProfile = getDeviceProfile()
                 val behaviorProfile = resolveBehavior(deviceProfile)
                 withContext(Dispatchers.Main.immediate) {
-                    if (_uiState.value.isCommitting) {
-                        pendingConfigurationRefresh = true
-                        return@withContext
+                    synchronized(configurationRefreshLock) {
+                        if (_uiState.value.isCommitting) {
+                            pendingConfigurationRefresh = true
+                            configurationRefreshInFlight = false
+                            return@synchronized
+                        }
+                        _uiState.update { it.copy(deviceProfile = deviceProfile, behaviorProfile = behaviorProfile) }
+                        configurationRefreshInFlight = false
+                        generatePreview(preserveOutcome = preserveOutcome)
                     }
-                    _uiState.update { it.copy(deviceProfile = deviceProfile, behaviorProfile = behaviorProfile) }
-                    generatePreview()
                 }
             }.onFailure { Logger.e("refreshForConfigurationChange failed", it) }
         }
     }
 
-    fun generatePreview() {
-        if (_uiState.value.isCommitting) return
+    fun generatePreview(preserveOutcome: Boolean = false) {
+        if (_uiState.value.isCommitting || configurationRefreshInFlight) return
         val state = _uiState.value
         val source = state.sourceImageMeta ?: return
         val device = state.deviceProfile ?: return
@@ -382,8 +398,8 @@ class EditorViewModel @Inject constructor(
                 // because publishedPreview is null until this render publishes.
                 retainedPreview = it.publishedPreview ?: it.retainedPreview,
                 renderFailed = false,
-                errorMessage = null,
-                successMessage = null
+                errorMessage = if (preserveOutcome) it.errorMessage else null,
+                successMessage = if (preserveOutcome) it.successMessage else null
             )
         }
 
@@ -617,7 +633,10 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun refreshPendingConfiguration() {
-        if (pendingConfigurationRefresh && !_uiState.value.isCommitting) refreshForConfigurationChange()
+        val shouldRefresh = synchronized(configurationRefreshLock) {
+            pendingConfigurationRefresh && !_uiState.value.isCommitting
+        }
+        if (shouldRefresh) refreshForConfigurationChange()
     }
 
     private fun isCurrentPreviewGeneration(generation: Int): Boolean = generation == previewGeneration.get()
@@ -650,19 +669,32 @@ class EditorViewModel @Inject constructor(
         successMessage: UiMessage? = null,
         errorMessage: UiMessage? = null
     ) {
-        _uiState.update { state ->
-            if (operationToken != exportOperationToken) {
-                state
-            } else {
+        var refreshQueued = false
+        synchronized(configurationRefreshLock) {
+            if (operationToken != exportOperationToken) return
+            refreshQueued = pendingConfigurationRefresh
+            if (refreshQueued) configurationRefreshInFlight = true
+            _uiState.update { state ->
                 val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isExporting = false,
+                    // A queued configuration change invalidates the old geometry at
+                    // the same transition that publication work becomes editable.
+                    publishedPreview = if (refreshQueued) null else state.publishedPreview,
+                    isRendering = if (refreshQueued) {
+                        state.sourceImageMeta != null && state.deviceProfile != null &&
+                            state.behaviorProfile != null
+                    } else {
+                        state.isRendering
+                    },
                     successMessage = if (stillAuthoritative) successMessage else state.successMessage,
                     errorMessage = if (stillAuthoritative) errorMessage else state.errorMessage
                 )
             }
+            pendingConfigurationRefresh = false
         }
+        if (refreshQueued) startConfigurationRefresh(preserveOutcome = true)
     }
 
     private fun finishApply(
@@ -672,19 +704,32 @@ class EditorViewModel @Inject constructor(
         successMessage: UiMessage? = null,
         errorMessage: UiMessage? = null
     ) {
-        _uiState.update { state ->
-            if (operationToken != applyOperationToken) {
-                state
-            } else {
+        var refreshQueued = false
+        synchronized(configurationRefreshLock) {
+            if (operationToken != applyOperationToken) return
+            refreshQueued = pendingConfigurationRefresh
+            if (refreshQueued) configurationRefreshInFlight = true
+            _uiState.update { state ->
                 val stillAuthoritative = operationGeneration == previewGeneration.get() &&
                     state.publishedPreview?.revision == operationRevision
                 state.copy(
                     isApplying = false,
+                    // A queued configuration change invalidates the old geometry at
+                    // the same transition that publication work becomes editable.
+                    publishedPreview = if (refreshQueued) null else state.publishedPreview,
+                    isRendering = if (refreshQueued) {
+                        state.sourceImageMeta != null && state.deviceProfile != null &&
+                            state.behaviorProfile != null
+                    } else {
+                        state.isRendering
+                    },
                     successMessage = if (stillAuthoritative) successMessage else state.successMessage,
                     errorMessage = if (stillAuthoritative) errorMessage else state.errorMessage
                 )
             }
+            pendingConfigurationRefresh = false
         }
+        if (refreshQueued) startConfigurationRefresh(preserveOutcome = true)
     }
 
     private fun appliedRes(target: WallpaperTarget): Int = when (target) {

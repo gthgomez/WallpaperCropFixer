@@ -278,6 +278,98 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
+    fun `queued configuration refresh drains when gated apply finishes before snackbar dismissal`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val applyRepository = FakeApplyRepository().apply {
+            started = CompletableDeferred()
+            gate = CompletableDeferred()
+        }
+        val vm = buildEditorViewModel(
+            deviceProfileRepository = deviceRepository,
+            applyRepository = applyRepository
+        )
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.applyWallpaper()
+        runBlocking { applyRepository.started!!.await() }
+        vm.refreshForConfigurationChange()
+
+        applyRepository.gate!!.complete(Unit)
+        waitForCondition {
+            !vm.uiState.value.isCommitting &&
+                vm.uiState.value.successMessage?.resId == R.string.editor_applied_home &&
+                deviceRepository.calls >= 2
+        }
+        assertEquals(R.string.editor_applied_home, vm.uiState.value.successMessage?.resId)
+
+        // Editing immediately cancels the snackbar effect, so the refresh must already
+        // be owned by the operation completion rather than clearSuccess().
+        vm.setCropMode(CropMode.FILL)
+        assertFalse("queued refresh must withdraw old geometry while metrics are gated",
+            vm.uiState.value.isPreviewCurrent)
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition {
+            deviceRepository.calls >= 2 &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+
+        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
+
+    @Test
+    fun `queued configuration refresh drains when gated save finishes before snackbar dismissal`() {
+        val deviceRepository = FakeDeviceProfileRepository()
+        val exportRepository = FakeExportRepository().apply {
+            started = CompletableDeferred()
+            gate = CompletableDeferred()
+        }
+        val vm = buildEditorViewModel(
+            deviceProfileRepository = deviceRepository,
+            exportRepository = exportRepository
+        )
+        vm.loadImage("photo")
+        waitForCondition { vm.uiState.value.isPreviewCurrent && !vm.uiState.value.isBusy }
+
+        deviceRepository.profile = deviceRepository.profile.copy(
+            screenWidthPx = 1440,
+            screenHeightPx = 2560,
+            aspectRatio = 1440f / 2560f
+        )
+        deviceRepository.gate = CompletableDeferred()
+        vm.exportWallpaper()
+        runBlocking { exportRepository.started!!.await() }
+        vm.refreshForConfigurationChange()
+
+        exportRepository.gate!!.complete(Unit)
+        waitForCondition {
+            !vm.uiState.value.isCommitting &&
+                vm.uiState.value.successMessage?.resId == R.string.export_saved_media_store &&
+                deviceRepository.calls >= 2
+        }
+        assertEquals(R.string.export_saved_media_store, vm.uiState.value.successMessage?.resId)
+
+        vm.setCropMode(CropMode.FILL)
+        assertFalse("queued refresh must withdraw old geometry while metrics are gated",
+            vm.uiState.value.isPreviewCurrent)
+        deviceRepository.gate!!.complete(Unit)
+        waitForCondition {
+            deviceRepository.calls >= 2 &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+
+        assertEquals(1440, vm.uiState.value.deviceProfile?.screenWidthPx)
+    }
+
+    @Test
     fun `enabling face analysis waits then renders exactly once`() {
         val faces = FakeFaceDetectionRepository()
         val renderer = FakeWallpaperBitmapRenderer()
