@@ -5,7 +5,7 @@ title: Privacy Policy — Wallpaper Crop Fixer
 
 # Privacy Policy — Wallpaper Crop Fixer
 
-**Last updated:** 2026-08-27
+**Last updated:** 2026-09-19
 
 **Developer/entity:** `OWNER_PROVIDE_PLAY_DEVELOPER_ENTITY`
 
@@ -20,7 +20,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 
 ## Summary
 
-- **No account required.** The app does not create user accounts or collect personal identifiers.
+- **No account required.** The app does not create user accounts. SDK installation identifiers are disclosed below.
 - **No server photo upload.** The app does not transmit your photos to developer servers.
 - **No ads or ad SDKs.** The app contains no advertising SDKs.
 - **Diagnostics:** The Google ML Kit Face Detection SDK may collect diagnostic and performance telemetry as documented below. We do not operate analytics of our own.
@@ -37,6 +37,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 - **EXIF orientation** is read locally to normalize rotation before cropping.
 - **Face-aware crop** uses **Google ML Kit Face Detection** (`com.google.mlkit:face-detection:16.1.7`) with the **bundled** on-device model shipped within the APK. Image pixels and face-detection results remain on your device and are never uploaded for ML inference.
 - **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDK may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls.
+- **Retention:** The cited ML Kit disclosure does not specify a retention period for this diagnostic metadata, and the application has no mechanism to delete telemetry held by Google. Consult Google's Privacy Policy for the provider's applicable retention practices.
 
 ## Wallpaper and export
 
@@ -46,23 +47,11 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 
 Default crop mode, wallpaper target, face-aware preference, and export quality are stored locally on your device using **DataStore**. These preferences are included in Android Auto Backup so your defaults can be restored after a device transfer; no images are backed up.
 
-## Google Play Data Safety worksheet (proposed; owner must confirm in Play Console)
+## Google Play Data Safety worksheet
 
-Based on the verified dependency behavior above, the intended Data Safety declaration is:
+The submission worksheet is [DATA_SAFETY_DRAFT.md](docs/release/DATA_SAFETY_DRAFT.md). It declares SDK diagnostic collection; **do not declare "No data collected"** for this dependency configuration. Photos and face results remain local. The app does not offer an SDK telemetry opt-out; turning off face-aware framing is not a verified telemetry opt-out.
 
-| Question | Answer |
-| --- | --- |
-| Play taxonomy | Collected? | Shared? | Ephemeral? | Required/optional | Purpose | Encrypted in transit? | Evidence / owner check |
-|---|---|---|---|---|---|---|---|
-| Device or other IDs (per-installation identifiers) | Yes, by bundled ML Kit diagnostics | No, per ML Kit disclosure | Unknown; SDK retention is not specified here | Optional to the app's core photo workflow; emitted by SDK behavior | Analytics / diagnostics | Yes, HTTPS | ML Kit disclosure; verify packaged/runtime behavior |
-| App info and performance (diagnostic events, latency, API configuration, input/output sizes, feature version, error codes) | Yes, by bundled ML Kit diagnostics | No, per ML Kit disclosure | Unknown; SDK retention is not specified here | Optional to the app's core photo workflow; emitted by SDK behavior | Analytics / diagnostics | Yes, HTTPS | ML Kit disclosure; verify packaged/runtime behavior |
-| Photos or videos / precise face data | Accessed and processed locally; not collected by this app | No | Yes, in-memory/cache processing only | Optional, only after the user selects a photo and enables face-aware processing | App functionality | Not applicable to local processing | Source code and physical traffic capture |
-
-The worksheet is advisory until physical-device traffic capture confirms the
-packaged SDK's runtime behavior. Do not answer “no data collected” if the
-packaged ML Kit diagnostics are present.
-
-> **Before submitting, verify the final traffic behavior on a physical device** (see the QA checklist, "Privacy" section) and adjust this worksheet to match what the compiled application actually does.
+Physical-device privacy traffic verification and final owner submission remain pending. A quiet traffic capture alone does not negate documented SDK collection. Developer identity/contact above must be completed by the owner.
 
 ## Contact
 

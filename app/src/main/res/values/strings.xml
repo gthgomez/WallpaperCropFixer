@@ -122,4 +122,5 @@
     <string name="export_saved_app_external_both">Saved home &amp; lock wallpapers to your device\'s WallpaperCropFixer folder (open your Files app to find it)</string>
     <string name="export_saved_app_internal">Saved to the app\'s internal storage — it won\'t appear in your gallery</string>
     <string name="export_saved_app_internal_both">Saved home &amp; lock wallpapers to the app\'s internal storage — they won\'t appear in your gallery</string>
+    <string name="settings_build_provenance">Version %1$s (%2$d) · Source %3$s</string>
 </resources>
