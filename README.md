@@ -2,6 +2,10 @@
 
 Wallpaper crop and adjustment utility. Uses on-device ML Kit face detection to position crops around faces and handles EXIF orientation correctly.
 
+> **Status: proprietary.** This repository is public for source visibility and
+> transparency. It is **not open source** — there is no license grant to reuse,
+> modify, or redistribute this code. See [LICENSE](LICENSE).
+
 **Tech stack:** Kotlin, Jetpack Compose, Material3, Hilt, DataStore, ML Kit Face Detection (bundled model), ExifInterface.
 
 **Permissions:** only `SET_WALLPAPER`. Photo selection uses the system Photo Picker with no photo-library permission. The merged manifest also carries `INTERNET`/`ACCESS_NETWORK_STATE` from the ML Kit SDK's telemetry transport — see [PRIVACY.md](PRIVACY.md) for the exact disclosure and the proposed Data Safety declaration.
