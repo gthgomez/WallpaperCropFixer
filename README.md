@@ -32,7 +32,9 @@ That task fails closed unless the isolated signing system injects
 `RELEASE_KEY_PASSWORD` at runtime. Never use the verification AAB for Play
 upload and never store those values in this repository or ordinary CI.
 
-**Detailed docs:** [AGENTS.md](AGENTS.md) | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | [STATUS.md](STATUS.md) | [PRIVACY.md](PRIVACY.md) | [QA_CHECKLIST.md](QA_CHECKLIST.md)
+**Project docs:** [docs/](docs/) | [STATUS.md](STATUS.md) | [PRIVACY.md](PRIVACY.md) | [QA_CHECKLIST.md](QA_CHECKLIST.md)
+
+Internal agent notes (not project documentation): [docs/agent/](docs/agent/)
 
 ## License
 
