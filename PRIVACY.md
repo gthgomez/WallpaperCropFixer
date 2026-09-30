@@ -36,11 +36,11 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 - **Crop and preview math** run entirely on your device.
 - **EXIF orientation** is read locally to normalize rotation before cropping.
 - **Face-aware crop** uses **Google ML Kit Face Detection** (`com.google.mlkit:face-detection:16.1.7`) with the **bundled** on-device model shipped within the APK. Image pixels and face-detection results remain on your device and are never uploaded for ML inference.
-- **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDK may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls.
+- **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDK may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls. Correspondingly, the app's own manifest declares only `SET_WALLPAPER`; the merged release manifest additionally carries `INTERNET` and `ACCESS_NETWORK_STATE`, contributed by the ML Kit SDK's telemetry transport (see [docs/security/permissions.md](docs/security/permissions.md)).
 
 ## Wallpaper and export
 
-- **`SET_WALLPAPER`:** When you apply a wallpaper, the rendered bitmap is handed directly to Android's on-device `WallpaperManager`. The app explicitly sets the system `allowBackup` flag to `false` so that applied wallpaper bitmaps are not uploaded to Google cloud backups.
+- **`SET_WALLPAPER`:** When you apply a wallpaper, the rendered bitmap is handed directly to Android's on-device `WallpaperManager`. Applied wallpaper images are managed by the system wallpaper service, not stored as app data, so they are not part of the app's cloud backup regardless of the app's `allowBackup` setting.
 
 ## Local preferences
 
