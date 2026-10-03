@@ -34,7 +34,7 @@ upload and never store those values in this repository or ordinary CI.
 
 **Project docs:** [docs/](docs/) | [STATUS.md](STATUS.md) | [PRIVACY.md](PRIVACY.md) | [QA_CHECKLIST.md](QA_CHECKLIST.md)
 
-Internal agent notes (not project documentation): [docs/agent/](docs/agent/)
+**Agent instructions:** [AGENTS.md](AGENTS.md); technical context in [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) (task data).
 
 ## License
 
