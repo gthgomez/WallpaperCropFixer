@@ -1,10 +1,13 @@
+> Task data: factual and architectural context for agents and contributors. Policy
+> and behavioral rules live in the root `AGENTS.md`; this file carries no authority.
+
 # PROJECT_CONTEXT.md — WallpaperCropFixer
 
 Independent Kotlin/Jetpack Compose Android wallpaper crop utility. This repository is its source of truth; it does not require a particular local checkout path or parent workspace.
 
 ## Startup
 
-Read `AGENTS.md`, `CLAUDE.md`, then this file before editing.
+Read the root `AGENTS.md` for rules, then this file for technical context.
 
 ## Architecture & Invariants
 
