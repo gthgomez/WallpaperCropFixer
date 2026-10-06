@@ -282,7 +282,18 @@ class EditorViewModel @Inject constructor(
         if (_uiState.value.isCommitting) return
         invalidatePublishedPreview()
         savedStateHandle[KEY_FACE_AWARE] = enabled
-        _uiState.update { it.copy(faceAwareEnabled = enabled, manualFocusPoint = null) }
+        _uiState.update {
+            it.copy(
+                faceAwareEnabled = enabled,
+                manualFocusPoint = null,
+                // FAILED keeps a null analysis, so turning the control on must re-run detection.
+                faceDetectionStatus = if (enabled && it.subjectAnalysis == null) {
+                    FaceDetectionStatus.NOT_RUN
+                } else {
+                    it.faceDetectionStatus
+                }
+            )
+        }
 
         cancelFaceAnalysis()
         generatePreview()
@@ -323,12 +334,18 @@ class EditorViewModel @Inject constructor(
             savedStateHandle.remove<Float>(KEY_FOCUS_X)
             savedStateHandle.remove<Float>(KEY_FOCUS_Y)
             _uiState.update {
+                val faceAware = settings.defaultFaceAwareEnabled
                 it.copy(
                     cropMode = settings.defaultCropMode,
                     wallpaperTarget = settings.defaultWallpaperTarget,
                     backgroundFillMode = settings.defaultBackgroundFillMode,
-                    faceAwareEnabled = settings.defaultFaceAwareEnabled,
-                    manualFocusPoint = null
+                    faceAwareEnabled = faceAware,
+                    manualFocusPoint = null,
+                    faceDetectionStatus = if (faceAware && it.subjectAnalysis == null) {
+                        FaceDetectionStatus.NOT_RUN
+                    } else {
+                        it.faceDetectionStatus
+                    }
                 )
             }
             generatePreview()
@@ -338,6 +355,9 @@ class EditorViewModel @Inject constructor(
     /** Re-runs the render for the current selection after a failure. */
     fun retryRender() {
         if (_uiState.value.sourceImageMeta == null || _uiState.value.isBusy) return
+        if (_uiState.value.faceAwareEnabled && _uiState.value.subjectAnalysis == null) {
+            _uiState.update { it.copy(faceDetectionStatus = FaceDetectionStatus.NOT_RUN) }
+        }
         if (configurationRefreshFailed) {
             refreshForConfigurationChange()
             return

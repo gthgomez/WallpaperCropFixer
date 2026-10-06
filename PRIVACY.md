@@ -41,7 +41,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 
 ## Wallpaper and export
 
-- **`SET_WALLPAPER`:** When you apply a wallpaper, the rendered bitmap is handed directly to Android's on-device `WallpaperManager`. The app explicitly sets the system `allowBackup` flag to `false` so that applied wallpaper bitmaps are not uploaded to Google cloud backups.
+- **`SET_WALLPAPER`:** When you apply a wallpaper, the rendered bitmap is handed directly to Android's on-device `WallpaperManager`. That call passes `allowBackup = false`, so the applied wallpaper image is not included in system wallpaper backup. The manifest flag `android:allowBackup` stays `true`; Android Auto Backup includes only the preference domains in the backup rules, not photos.
 
 ## Local preferences
 
