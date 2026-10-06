@@ -26,7 +26,7 @@ If a signing secret is ever exposed, treat it as compromised: rotate it through 
 
 ## Data handling
 
-[PRIVACY.md](PRIVACY.md) documents the data model: on-device photo processing, no photo-library permission, system Photo Picker selection, `allowBackup` disabled for wallpaper bitmaps, and the ML Kit SDK diagnostic telemetry disclosure. Note that the ML Kit SDK is a third party; issues in it belong to Google, not here. [QA_CHECKLIST.md](QA_CHECKLIST.md) and [STATUS.md](STATUS.md) are the project's own verification record.
+[PRIVACY.md](PRIVACY.md) documents the data model: on-device photo processing, no photo-library permission, system Photo Picker selection, `WallpaperManager` `allowBackup=false` for applied wallpaper images while the manifest `allowBackup` flag stays true for preference backup, and the ML Kit SDK diagnostic telemetry disclosure. Note that the ML Kit SDK is a third party; issues in it belong to Google, not here. [QA_CHECKLIST.md](QA_CHECKLIST.md) and [STATUS.md](STATUS.md) are the project's own verification record.
 
 ## Reporting a genuine concern
 
