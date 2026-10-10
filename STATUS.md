@@ -1,9 +1,22 @@
 # WallpaperCropFixer Status
 
-**Updated:** 2026-09-19
-**State:** Post-RC1 main; integrated RC2 candidate code gates PASS, physical and Play gates pending. No RC2 tag.
+**Updated:** 2026-10-10
+**State:** Post-RC1 main; integrated RC2 candidate code gates PASS, physical and Play gates pending. No RC2 tag. Post-RC2 feature work below is unreleased and not yet part of a certified candidate.
 **Starting main:** `ce002089d3ff9aabcacffbf9cb5ed7a2121eadcc` (live main checked at campaign start).
 Historical RC1 results do not certify current source. See the release readiness report for the candidate record and `QA_CHECKLIST.md` for pending physical/Play gates.
+
+## Post-RC2 development (unreleased — 2026-10-10)
+
+Competitive-gap work (see `~/.commandcode/plans/wallpapercropfixer-competitive-improvements.md`). Local gates executed and PASS: `lintDebug`, `lintReleaseVerification`, `testDebugUnitTest`, `assembleDebug`, `assembleReleaseVerification`. Not a candidate certification; device/Play gates remain owner actions.
+
+- **Lock-clock / parallax honesty guides:** the preview now characterizes the lock clock + inset region and the home-screen parallax-visible window, warns when an analyzed subject would sit under the clock or scroll off the edge, and draws a faint clock-area guide.
+- **Subject-aware framing:** added ML Kit **Subject Segmentation** (unbundled, `com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1`, declared via ML Kit `DEPENDENCIES`). Framing priority is now manual > subject > face > center; a missing/failed model degrades to faces then center. Privacy/Data-Safety docs updated to disclose the Play-services model download.
+- **Export receipt:** the editor shows the exact rendered `W×H`, making the "source never silently resized" guarantee visible.
+- **Palette-derived finishes:** Color/Gradient backgrounds now use a deterministic dominant-color palette extractor (`PaletteExtractor`) instead of 4-corner sampling.
+- **Bounded on-device history:** successful exports are recorded locally (DataStore) and the entry screen offers a "Recent" list with one-tap "Set again". No new permissions, no network.
+- **Store listing repositioned** toward honest no-crop/square-fit/blur terms and phone-shaped framing.
+
+Deferred (documented, not implemented): subject-cutout finish, "enhance before applying" toggle, auto-rotate/widget/scheduling, batch fast-path.
 
 ## Purpose
 

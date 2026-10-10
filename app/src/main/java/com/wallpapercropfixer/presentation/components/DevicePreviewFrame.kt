@@ -18,7 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -34,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wallpapercropfixer.R
 import com.wallpapercropfixer.core.math.ViewportTransform
+import com.wallpapercropfixer.domain.model.CropRect
 import com.wallpapercropfixer.domain.model.FocusPoint
 
 /** Fraction of the canvas the focus moves per accessibility action. */
@@ -57,6 +60,8 @@ fun DevicePreviewFrame(
     deviceAspectRatio: Float = 9f / 19f,
     focusPoint: FocusPoint? = null,
     showFocusMarker: Boolean = true,
+    /** Lock clock + inset region, normalized to the rendered canvas; drawn as a faint guide. */
+    lockClockArea: CropRect? = null,
     onFocusTap: ((FocusPoint) -> Unit)? = null
 ) {
     val frameShape = RoundedCornerShape(28.dp)
@@ -200,6 +205,33 @@ fun DevicePreviewFrame(
                         center = center
                     )
                 }
+            }
+            // Faint lock-clock safe-area guide so a subject is never hidden by the
+            // lock clock. Only present on LOCK renders (null elsewhere).
+            lockClockArea?.let { area ->
+                val viewportAspect = size.width / size.height
+                val topLeft = ViewportTransform.bitmapToViewport(
+                    x = area.left, y = area.top,
+                    bitmapAspect = bitmapAspect, viewportAspect = viewportAspect
+                )
+                val bottomRight = ViewportTransform.bitmapToViewport(
+                    x = area.right, y = area.bottom,
+                    bitmapAspect = bitmapAspect, viewportAspect = viewportAspect
+                )
+                val left = topLeft.x * size.width
+                val top = topLeft.y * size.height
+                val right = bottomRight.x * size.width
+                val bottom = bottomRight.y * size.height
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.5f),
+                    topLeft = Offset(left, top),
+                    size = Size(
+                        (right - left).coerceAtLeast(0f),
+                        (bottom - top).coerceAtLeast(0f)
+                    ),
+                    cornerRadius = CornerRadius(14.dp.toPx(), 14.dp.toPx()),
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
             }
         }
         } else {

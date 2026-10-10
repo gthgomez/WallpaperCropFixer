@@ -14,6 +14,7 @@ import com.wallpapercropfixer.data.wallpaper.WallpaperSetFailedException
 import com.wallpapercropfixer.data.wallpaper.WallpaperUnsupportedException
 import com.wallpapercropfixer.domain.model.BackgroundFillMode
 import com.wallpapercropfixer.domain.model.CropMode
+import com.wallpapercropfixer.domain.model.WallpaperHistoryEntry
 import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
 import com.wallpapercropfixer.domain.model.UserSettings
@@ -21,6 +22,7 @@ import com.wallpapercropfixer.domain.repository.ExportDestination
 import com.wallpapercropfixer.domain.repository.ExportResult
 import com.wallpapercropfixer.domain.repository.ImageRepository
 import com.wallpapercropfixer.domain.repository.SettingsRepository
+import com.wallpapercropfixer.domain.repository.WallpaperHistoryRepository
 import com.wallpapercropfixer.domain.usecase.AnalyzeSubjectUseCase
 import com.wallpapercropfixer.domain.usecase.ApplyWallpaperUseCase
 import com.wallpapercropfixer.domain.usecase.BuildWallpaperRenderPlanUseCase
@@ -73,6 +75,7 @@ class EditorViewModel @Inject constructor(
     private val renderBitmap: RenderWallpaperBitmapUseCase,
     private val exportWallpaper: ExportWallpaperUseCase,
     private val applyWallpaper: ApplyWallpaperUseCase,
+    private val historyRepository: WallpaperHistoryRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -583,6 +586,27 @@ class EditorViewModel @Inject constructor(
                 val lockExport = published.lock?.let { save(it, "wcf_lock") }
                 val home = homeExport.getOrNull()
                 val lock = lockExport?.getOrNull()
+
+                // Bounded, on-device history: remember the rendered file so the entry
+                // screen can offer it again. Recording never fails the export.
+                if (home != null) {
+                    runCatching {
+                        val now = System.currentTimeMillis()
+                        historyRepository.record(
+                            WallpaperHistoryEntry(
+                                id = now,
+                                renderedAtEpochMs = now,
+                                target = published.target,
+                                cropMode = published.home.request.cropMode,
+                                fillMode = published.home.request.backgroundFillMode,
+                                filePath = home.pathOrUri,
+                                widthPx = published.home.plan.targetCanvasSpec.widthPx,
+                                heightPx = published.home.plan.targetCanvasSpec.heightPx
+                            )
+                        )
+                    }
+                }
+
                 val error = when {
                     lockExport == null && home == null -> R.string.error_export
                     lockExport != null && home == null && lock == null -> R.string.error_export

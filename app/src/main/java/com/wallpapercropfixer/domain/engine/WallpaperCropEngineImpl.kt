@@ -2,7 +2,9 @@ package com.wallpapercropfixer.domain.engine
 
 import com.wallpapercropfixer.core.math.AspectRatioUtils
 import com.wallpapercropfixer.core.math.CropMath
+import com.wallpapercropfixer.core.math.WallpaperSafeAreaMath
 import com.wallpapercropfixer.domain.model.CropRect
+import com.wallpapercropfixer.domain.model.FaceBounds
 import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.model.WallpaperRenderPlan
 import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
@@ -87,13 +89,58 @@ class WallpaperCropEngineImpl @Inject constructor(
             CropRect(0f, 0f, canvasSpec.widthPx.toFloat(), canvasSpec.heightPx.toFloat())
         }
 
+        val canvasRect = CropRect(0f, 0f, canvasSpec.widthPx.toFloat(), canvasSpec.heightPx.toFloat())
+        val visibleWindow = WallpaperSafeAreaMath.visibleWindow(
+            canvasWidth = canvasSpec.widthPx,
+            canvasHeight = canvasSpec.heightPx,
+            screenWidth = request.deviceProfile.screenWidthPx,
+            screenHeight = request.deviceProfile.screenHeightPx
+        )
+        val lockClockSafeArea = if (effectiveTarget == WallpaperTarget.LOCK) {
+            WallpaperSafeAreaMath.lockClockSafeArea(canvasSpec.widthPx, canvasSpec.heightPx)
+        } else {
+            null
+        }
+
+        // Guide advisories use the analyzed anchor rects (subjects preferred, else faces)
+        // mapped into canvas space through the same transform as the focus overlay.
+        val anchorBounds = if (request.enableFaceAwareFocus && subjectAnalysis != null) {
+            subjectAnalysis.subjects.ifEmpty { subjectAnalysis.faces }
+        } else {
+            emptyList()
+        }
+        val canvasAnchors = anchorBounds.map { bounds ->
+            CropMath.sourceRectToCanvasRect(
+                sourceRect = CropMath.faceBoundsToCropRect(bounds),
+                sourceWidth = request.source.width,
+                sourceHeight = request.source.height,
+                sourceCropRect = chosenCropRect,
+                outputImagePlacement = outputPlacement,
+                canvasWidth = canvasSpec.widthPx,
+                canvasHeight = canvasSpec.heightPx
+            )
+        }
+        val subjectInClockZone = lockClockSafeArea != null &&
+            canvasAnchors.any { WallpaperSafeAreaMath.intersects(it, lockClockSafeArea) }
+        val subjectExposedToParallax = canvasAnchors.any { anchor ->
+            WallpaperSafeAreaMath.exposedToParallax(
+                bounds = FaceBounds(anchor.left, anchor.top, anchor.right, anchor.bottom),
+                canvas = canvasRect,
+                visibleWindow = visibleWindow
+            )
+        }
+
         return WallpaperRenderPlan(
             sourceCropRect = chosenCropRect,
             targetCanvasSpec = canvasSpec,
             outputImagePlacement = outputPlacement,
             usePadding = usePadding,
             backgroundFillMode = request.backgroundFillMode,
-            finalFocusPoint = focusPoint
+            finalFocusPoint = focusPoint,
+            visibleWindow = visibleWindow,
+            lockClockSafeArea = lockClockSafeArea,
+            subjectInClockZone = subjectInClockZone,
+            subjectExposedToParallax = subjectExposedToParallax
         )
     }
 }

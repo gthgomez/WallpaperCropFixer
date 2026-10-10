@@ -14,6 +14,7 @@ import com.wallpapercropfixer.domain.model.SourceImageMeta
 import com.wallpapercropfixer.domain.model.SubjectAnalysis
 import com.wallpapercropfixer.domain.model.UserSettings
 import com.wallpapercropfixer.domain.model.WallpaperBehaviorProfile
+import com.wallpapercropfixer.domain.model.WallpaperHistoryEntry
 import com.wallpapercropfixer.domain.model.WallpaperRenderPlan
 import com.wallpapercropfixer.domain.model.WallpaperRenderRequest
 import com.wallpapercropfixer.domain.model.WallpaperTarget
@@ -26,6 +27,7 @@ import com.wallpapercropfixer.domain.repository.SettingsRepository
 import com.wallpapercropfixer.domain.repository.WallpaperApplyRepository
 import com.wallpapercropfixer.domain.repository.WallpaperBehaviorRepository
 import com.wallpapercropfixer.domain.repository.WallpaperExportRepository
+import com.wallpapercropfixer.domain.repository.WallpaperHistoryRepository
 import com.wallpapercropfixer.domain.usecase.AnalyzeSubjectUseCase
 import com.wallpapercropfixer.domain.usecase.ApplyWallpaperUseCase
 import com.wallpapercropfixer.domain.usecase.BuildWallpaperRenderPlanUseCase
@@ -38,6 +40,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -168,6 +171,20 @@ class FakeApplyRepository : WallpaperApplyRepository {
     }
 }
 
+class FakeWallpaperHistoryRepository : WallpaperHistoryRepository {
+    val recorded = mutableListOf<WallpaperHistoryEntry>()
+
+    override fun observeHistory(): Flow<List<WallpaperHistoryEntry>> = flowOf(recorded.toList())
+
+    override suspend fun record(entry: WallpaperHistoryEntry) {
+        recorded.add(entry)
+    }
+
+    override suspend fun clear() {
+        recorded.clear()
+    }
+}
+
 fun buildEditorViewModel(
     imageRepository: ImageRepository = FakeImageRepository(),
     settingsRepository: SettingsRepository = FakeSettingsRepository(),
@@ -177,6 +194,7 @@ fun buildEditorViewModel(
     renderer: WallpaperBitmapRenderer = FakeWallpaperBitmapRenderer(),
     exportRepository: WallpaperExportRepository = FakeExportRepository(),
     applyRepository: WallpaperApplyRepository = FakeApplyRepository(),
+    historyRepository: WallpaperHistoryRepository = FakeWallpaperHistoryRepository(),
     savedStateHandle: SavedStateHandle = SavedStateHandle()
 ): EditorViewModel = EditorViewModel(
     imageRepository = imageRepository,
@@ -194,5 +212,6 @@ fun buildEditorViewModel(
     renderBitmap = RenderWallpaperBitmapUseCase(renderer),
     exportWallpaper = ExportWallpaperUseCase(exportRepository),
     applyWallpaper = ApplyWallpaperUseCase(applyRepository),
+    historyRepository = historyRepository,
     savedStateHandle = savedStateHandle
 )

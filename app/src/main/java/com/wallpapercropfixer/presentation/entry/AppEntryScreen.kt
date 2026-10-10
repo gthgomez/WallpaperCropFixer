@@ -35,7 +35,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +55,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wallpapercropfixer.R
+import com.wallpapercropfixer.domain.model.WallpaperHistoryEntry
+import com.wallpapercropfixer.domain.model.WallpaperTarget
 import com.wallpapercropfixer.presentation.components.CropMarkBadge
 import com.wallpapercropfixer.presentation.components.FitDemoCanvas
 import com.wallpapercropfixer.presentation.theme.WallpaperCropFixerTheme
@@ -65,12 +71,27 @@ import java.io.File
 @Composable
 fun AppEntryScreen(
     onImageSelected: (String) -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    viewModel: EntryViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isPreparing by remember { mutableStateOf(false) }
     var copyError by remember { mutableStateOf(false) }
+
+    val recent by viewModel.recent.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    val isReapplying by viewModel.isApplying.collectAsStateWithLifecycle()
+
+    val messageRes = when (message) {
+        EntryMessage.APPLIED -> R.string.entry_recent_applied
+        EntryMessage.FAILED -> R.string.entry_recent_failed
+        null -> null
+    }
+    LaunchedEffect(message) {
+        // One-shot: consume the outcome so it does not re-appear on recomposition.
+        if (message != null) viewModel.clearMessage()
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -97,6 +118,10 @@ fun AppEntryScreen(
     EntryContent(
         isPreparing = isPreparing,
         copyError = copyError,
+        recent = recent,
+        messageRes = messageRes,
+        isReapplying = isReapplying,
+        onReapply = viewModel::reapply,
         onChoosePhoto = {
             copyError = false
             launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -111,7 +136,11 @@ internal fun EntryContent(
     isPreparing: Boolean,
     copyError: Boolean,
     onChoosePhoto: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    recent: List<WallpaperHistoryEntry> = emptyList(),
+    messageRes: Int? = null,
+    isReapplying: Boolean = false,
+    onReapply: (WallpaperHistoryEntry) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -274,8 +303,65 @@ internal fun EntryContent(
             )
         }
 
+        if (messageRes != null) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Text(
+                    text = stringResource(messageRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+
+        // Bounded, on-device history: reuse a wallpaper you already made, one tap.
+        if (recent.isNotEmpty()) {
+            Spacer(Modifier.height(20.dp))
+            Column(modifier = Modifier.padding(horizontal = 28.dp)) {
+                Text(
+                    text = stringResource(R.string.entry_recent_title),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(2.dp))
+                recent.take(3).forEach { entry ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(entry.target.labelRes()),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { onReapply(entry) },
+                            enabled = !isReapplying
+                        ) {
+                            Text(stringResource(R.string.entry_recent_set_again))
+                        }
+                    }
+                }
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
     }
+}
+
+private fun WallpaperTarget.labelRes(): Int = when (this) {
+    WallpaperTarget.HOME -> R.string.target_home
+    WallpaperTarget.LOCK -> R.string.target_lock
+    WallpaperTarget.BOTH -> R.string.target_both
 }
 
 @Preview(showBackground = true, widthDp = 400, heightDp = 880)

@@ -99,4 +99,41 @@ class FocusPointResolverTest {
         assertEquals(0.5f, result.xNormalized, tolerance)
         assertEquals(0.5f, result.yNormalized, tolerance)
     }
+
+    @Test
+    fun `subject cluster outranks faces when both are present`() {
+        val analysis = SubjectAnalysis(
+            faces = listOf(FaceBounds(0f, 0f, 100f, 100f)),
+            suggestedFocusPoint = null,
+            subjects = listOf(FaceBounds(400f, 400f, 600f, 600f))
+        )
+        val result = resolver.resolve(
+            manual = null,
+            faceAwareEnabled = true,
+            subjectAnalysis = analysis,
+            sourceWidth = 1000,
+            sourceHeight = 1000
+        )
+        // Subject center (500,500) -> 0.5, 0.5 (not the face at (50,50)).
+        assertEquals(0.5f, result.xNormalized, tolerance)
+        assertEquals(0.5f, result.yNormalized, tolerance)
+    }
+
+    @Test
+    fun `falls back to faces when no subjects were segmented`() {
+        val analysis = SubjectAnalysis(
+            faces = listOf(FaceBounds(100f, 100f, 200f, 200f)),
+            suggestedFocusPoint = null,
+            subjects = emptyList()
+        )
+        val result = resolver.resolve(
+            manual = null,
+            faceAwareEnabled = true,
+            subjectAnalysis = analysis,
+            sourceWidth = 1000,
+            sourceHeight = 1000
+        )
+        assertEquals(0.15f, result.xNormalized, tolerance)
+        assertEquals(0.15f, result.yNormalized, tolerance)
+    }
 }

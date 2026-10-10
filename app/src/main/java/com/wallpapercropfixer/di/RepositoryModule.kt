@@ -4,6 +4,7 @@ import com.wallpapercropfixer.data.behavior.DefaultWallpaperBehaviorRepository
 import com.wallpapercropfixer.data.device.AndroidDeviceProfileRepository
 import com.wallpapercropfixer.data.export.AndroidWallpaperExportRepository
 import com.wallpapercropfixer.data.face.MlKitFaceDetectionRepository
+import com.wallpapercropfixer.data.history.DataStoreWallpaperHistoryRepository
 import com.wallpapercropfixer.data.image.AndroidImageRepository
 import com.wallpapercropfixer.data.settings.DataStoreSettingsRepository
 import com.wallpapercropfixer.data.wallpaper.AndroidWallpaperApplyRepository
@@ -14,6 +15,7 @@ import com.wallpapercropfixer.domain.repository.SettingsRepository
 import com.wallpapercropfixer.domain.repository.WallpaperApplyRepository
 import com.wallpapercropfixer.domain.repository.WallpaperBehaviorRepository
 import com.wallpapercropfixer.domain.repository.WallpaperExportRepository
+import com.wallpapercropfixer.domain.repository.WallpaperHistoryRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -44,4 +46,7 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindSettingsRepository(impl: DataStoreSettingsRepository): SettingsRepository
+
+    @Binds @Singleton
+    abstract fun bindWallpaperHistoryRepository(impl: DataStoreWallpaperHistoryRepository): WallpaperHistoryRepository
 }

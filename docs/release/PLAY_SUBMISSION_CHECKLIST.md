@@ -14,18 +14,19 @@ Legend: ☐ = owner action · ▨ = agent-prepared artifact to paste/upload.
 - ☐ Device QA passed per DEVICE_QA_RUNBOOK.md (Galaxy S25 Ultra primary).
 
 ## Phase 1 — App entry
-- ☐ Create app: name **"Wallpaper Crop Fixer"** (20/30 chars), default language English (en-US), App or Game = **App**, Free or Paid = **Free** (no ads, no IAP — REPOSITORY_DERIVED_ANSWER).
+- ☐ Create app: name **"Wallpaper Crop Fixer: No Crop"** (29/30 chars), default language English (en-US), App or Game = **App**, Free or Paid = **Free** (no ads, no IAP — REPOSITORY_DERIVED_ANSWER).
 - ☐ Declaration checkboxes: developer program policies + US export laws → accept.
 
 ## Phase 2 — Store listing (Grow → Store presence → Main store listing)
 Fields:
-- ▨ App name: `Wallpaper Crop Fixer` — 20/30 chars (limit 30 — **VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/13393723).
-- ▨ Short description: `Preview how your photo fits home and lock screens before you set it. No ads.` — 76/80 chars (limit 80 — same source).
-- ▨ Full description: STORE_LISTING_DRAFT.md §2 (≤4000 chars, same source).
+- ▨ App name: `Wallpaper Crop Fixer: No Crop` — 29/30 chars (limit 30 — **VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/13393723).
+- ▨ Short description: `No crop, square fit, blur background — preview before you set it. No ads.` — 73/80 chars (limit 80 — same source).
+- ▨ Full description: STORE_LISTING_DRAFT.md §2 (new no-crop/fit-to-screen copy, measured 3043/4000 chars — same source).
 - ▨ App icon: 512×512 32-bit PNG ≤1 MB (export from repo adaptive-icon foreground/background — REPOSITORY_DERIVED_ANSWER).
 - ▨ Feature graphic: 1024×500, JPEG or 24-bit PNG without alpha (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: https://support.google.com/googleplay/android-developer/answer/9866151) — concept in STORE_LISTING_DRAFT.md §5.
 - ▨ Phone screenshots: **minimum 2** (5 planned; not yet captured), PNG/JPEG, 16:9 or 9:16, each side 320–3840 px, max 8 per device type (**VERIFIED_CURRENT_GOOGLE_REQUIREMENT**: same source) — plan in STORE_LISTING_DRAFT.md §4.
 - ☐ Category: **Personalization**; tags: wallpaper, photos/customization (Play offers tag picker — OWNER_MUST_CONFIRM exact tags available).
+- ☐ Tags/keywords should include the no-crop / square-fit discovery terms (no crop, square fit, fit photo to screen, blur background wallpaper, set photo as wallpaper, wallpaper without cropping) — see STORE_LISTING_DRAFT.md "Store keywords & positioning".
 - ☐ Store contact: email OWNER_MUST_CONFIRM; website `https://github.com/gthgomez/WallpaperCropFixer` (or Pages site); no phone required.
 
 ## Phase 3 — App content declarations (Policy and programs → App content)

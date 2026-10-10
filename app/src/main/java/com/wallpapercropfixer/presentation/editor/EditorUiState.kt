@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.annotation.StringRes
 import com.wallpapercropfixer.domain.model.BackgroundFillMode
 import com.wallpapercropfixer.domain.model.CropMode
+import com.wallpapercropfixer.domain.model.CropRect
 import com.wallpapercropfixer.domain.model.DeviceProfile
 import com.wallpapercropfixer.domain.model.FocusPoint
 import com.wallpapercropfixer.domain.model.SourceImageMeta
@@ -124,6 +125,50 @@ data class EditorUiState(
             val targetH = render.plan.targetCanvasSpec.heightPx
             return meta.width < targetW * 0.8f || meta.height < targetH * 0.8f
         }
+
+    /** Advisory: an analyzed subject overlaps the lock-screen clock region. */
+    val lockClockWarning: Boolean
+        get() = displayedPreview?.plan?.subjectInClockZone == true
+
+    /** Advisory: an analyzed subject sits in the home-screen parallax scroll margin. */
+    val parallaxWarning: Boolean
+        get() = displayedPreview?.plan?.subjectExposedToParallax == true
+
+    /** Lock clock + inset region of the displayed render, normalized to the canvas. */
+    val lockClockArea: CropRect?
+        get() = displayedPreview?.plan?.let { plan ->
+            plan.lockClockSafeArea?.normalizedBy(plan)
+        }
+
+    /** Visible-at-rest window of the displayed render, normalized; null when none. */
+    val parallaxWindow: CropRect?
+        get() = displayedPreview?.plan?.let { plan ->
+            val window = plan.visibleWindow ?: return@let null
+            val spec = plan.targetCanvasSpec
+            if (window.width >= spec.widthPx - 1f && window.height >= spec.heightPx - 1f) {
+                null
+            } else {
+                window.normalizedBy(plan)
+            }
+        }
+
+    /** Exact rendered output dimensions, for the export/save receipt. */
+    val outputWidthPx: Int?
+        get() = retainedPreview?.home?.plan?.targetCanvasSpec?.widthPx
+
+    val outputHeightPx: Int?
+        get() = retainedPreview?.home?.plan?.targetCanvasSpec?.heightPx
+
+    private fun CropRect.normalizedBy(plan: WallpaperRenderPlan): CropRect {
+        val w = plan.targetCanvasSpec.widthPx.toFloat().coerceAtLeast(1f)
+        val h = plan.targetCanvasSpec.heightPx.toFloat().coerceAtLeast(1f)
+        return CropRect(
+            left = (left / w).coerceIn(0f, 1f),
+            top = (top / h).coerceIn(0f, 1f),
+            right = (right / w).coerceIn(0f, 1f),
+            bottom = (bottom / h).coerceIn(0f, 1f)
+        )
+    }
 
     private fun displayedRender(publication: PublishedPreview): RenderedPreview =
         if (publication.target == WallpaperTarget.BOTH && previewingLock) {
