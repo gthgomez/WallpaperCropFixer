@@ -489,6 +489,48 @@ class EditorViewModelConcurrencyTest {
     }
 
     @Test
+    fun `failed face detection runs again when face-aware is turned back on`() {
+        val faces = FakeFaceDetectionRepository().apply { failNextAttempts(1) }
+        val vm = buildEditorViewModel(faceDetectionRepository = faces)
+        vm.loadImage("photo")
+        waitForCondition {
+            vm.uiState.value.faceDetectionStatus == FaceDetectionStatus.FAILED && !vm.uiState.value.isBusy
+        }
+        assertEquals(1, faces.completedCount)
+        assertNull(vm.uiState.value.subjectAnalysis)
+
+        vm.toggleFaceAware(false)
+        waitForCondition { !vm.uiState.value.isBusy }
+        assertEquals(1, faces.completedCount)
+
+        vm.toggleFaceAware(true)
+        waitForCondition {
+            vm.uiState.value.faceDetectionStatus == FaceDetectionStatus.NO_FACES && !vm.uiState.value.isBusy
+        }
+        assertEquals(2, faces.completedCount)
+        assertNotNull(vm.uiState.value.subjectAnalysis)
+    }
+
+    @Test
+    fun `retryRender reruns face detection after a failed analysis`() {
+        val faces = FakeFaceDetectionRepository().apply { failNextAttempts(1) }
+        val vm = buildEditorViewModel(faceDetectionRepository = faces)
+        vm.loadImage("photo")
+        waitForCondition {
+            vm.uiState.value.faceDetectionStatus == FaceDetectionStatus.FAILED &&
+                vm.uiState.value.isPreviewCurrent &&
+                !vm.uiState.value.isBusy
+        }
+
+        vm.retryRender()
+        waitForCondition {
+            vm.uiState.value.faceDetectionStatus == FaceDetectionStatus.NO_FACES && !vm.uiState.value.isBusy
+        }
+        assertEquals(2, faces.completedCount)
+        assertNotNull(vm.uiState.value.subjectAnalysis)
+    }
+
+    @Test
     fun `repeated apply and save taps cannot start competing operations`() {
         val applyRepo = FakeApplyRepository().apply {
             started = CompletableDeferred()

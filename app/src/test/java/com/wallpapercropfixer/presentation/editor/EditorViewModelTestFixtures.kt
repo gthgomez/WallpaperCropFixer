@@ -87,12 +87,20 @@ class FakeFaceDetectionRepository : FaceDetectionRepository {
     val gates = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     val started = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     var completedCount = 0
+    private val remainingFailures = AtomicInteger(0)
+
+    fun failNextAttempts(count: Int) {
+        remainingFailures.set(count)
+    }
 
     override suspend fun analyzeFaces(uri: String): SubjectAnalysis {
         started.getOrPut(uri) { CompletableDeferred() }.complete(Unit)
         val gate = gates[uri]
         if (gate != null) withContext(NonCancellable) { gate.await() }
         completedCount++
+        if (remainingFailures.getAndDecrement() > 0) {
+            error("synthetic face detection failure")
+        }
         return analyses[uri] ?: SubjectAnalysis(emptyList(), null)
     }
 }
