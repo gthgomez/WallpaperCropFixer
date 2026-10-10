@@ -18,6 +18,10 @@
     <string name="entry_privacy">Photos processed on your device. No photo upload.</string>
     <string name="entry_help_title">Start with a photo — not a tutorial.</string>
     <string name="entry_help_body">Adjust the fit only when you need to.</string>
+    <string name="entry_recent_title">Recent</string>
+    <string name="entry_recent_set_again">Set again</string>
+    <string name="entry_recent_applied">Wallpaper set</string>
+    <string name="entry_recent_failed">Couldn\'t set that wallpaper</string>
 
     <!-- Editor screen -->
     <string name="editor_title">Make it fit</string>
@@ -51,6 +55,10 @@
     <string name="editor_background_when_space">Photo-derived finish</string>
     <string name="editor_launcher_disclaimer">Launcher framing may vary.</string>
     <string name="editor_low_resolution">Low resolution — may appear pixelated</string>
+    <string name="editor_clock_warning">Subject may sit under the lock clock</string>
+    <string name="editor_parallax_warning">Subject may scroll off at the home screen edge</string>
+    <string name="editor_output_size">Rendered at %1$d×%2$d</string>
+    <string name="editor_guide_clock">Lock clock area</string>
     <string name="editor_device_info">Preview sized for %1$s %2$s</string>
     <string name="editor_save">Save</string>
     <string name="editor_applied_home">Wallpaper applied to home screen</string>

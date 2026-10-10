@@ -51,8 +51,18 @@ class WallpaperBitmapRendererImplTest {
             GradientBackgroundRenderer()
         )
 
+    /** Palette extraction quantizes to 5 bits/channel, so compare with a tolerance. */
+    private fun assertColorNear(expected: Int, actual: Int, tolerance: Int = 8) {
+        val delta = maxOf(
+            kotlin.math.abs(Color.red(expected) - Color.red(actual)),
+            kotlin.math.abs(Color.green(expected) - Color.green(actual)),
+            kotlin.math.abs(Color.blue(expected) - Color.blue(actual))
+        )
+        assertTrue("expected ~$expected but was $actual", delta <= tolerance)
+    }
+
     @Test
-    fun `color background uses photo edges instead of black`() {
+    fun `color background uses the photo's dominant color instead of black`() {
         val context = RuntimeEnvironment.getApplication()
         val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
         val photoColor = Color.rgb(180, 100, 60)
@@ -75,8 +85,8 @@ class WallpaperBitmapRendererImplTest {
             .buildPlan(request, null)
         val output = runBlocking { buildRenderer(context).render(request, plan) }
         assertTrue(plan.usePadding)
-        assertEquals(photoColor, output.getPixel(0, 0))
-        assertEquals(photoColor, output.getPixel(99, 199))
+        assertColorNear(photoColor, output.getPixel(0, 0))
+        assertColorNear(photoColor, output.getPixel(99, 199))
         output.recycle()
     }
 

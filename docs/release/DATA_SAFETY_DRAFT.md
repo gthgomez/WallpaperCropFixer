@@ -5,7 +5,7 @@ Reviewed official sources on 2026-09-19; final Console declaration remains an ow
 
 ## Documented SDK facts
 
-[Google ML Kit disclosure](https://developers.google.com/ml-kit/android-data-disclosure) includes bundled-feature installation identifiers, device/app metadata and diagnostic/performance events. Transport is HTTPS; Google states this data is not transferred to third parties. On-device inference does not mean zero SDK collection. The pinned bundled Face Detection dependency is `16.1.7`; confirm applicable SDK guidance when upgrading.
+[Google ML Kit disclosure](https://developers.google.com/ml-kit/android-data-disclosure) includes bundled-feature installation identifiers, device/app metadata and diagnostic/performance events. Transport is HTTPS; Google states this data is not transferred to third parties. On-device inference does not mean zero SDK collection. The pinned bundled Face Detection dependency is `16.1.7`. Subject-aware framing additionally uses the **unbundled** ML Kit Subject Segmentation model (`com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1`): the app declares it via ML Kit `DEPENDENCIES` metadata and **Google Play services downloads/manages the model** (network activity owned by Play services, not the app). Inference remains on-device. Confirm applicable SDK guidance when upgrading either dependency.
 
 [Google Play guidance](https://support.google.com/googleplay/android-developer/answer/10787469) requires SDK collection in the declaration. Local-only photo processing is not collection. Optional collection requires user choice; ephemeral treatment requires the documented processing conditions, not merely an absence of observed traffic.
 

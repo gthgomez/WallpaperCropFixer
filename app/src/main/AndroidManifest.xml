@@ -24,6 +24,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Subject segmentation is an unbundled ML Kit model; declaring it here
+             lets Play services fetch the model at install time. The app degrades
+             to face-aware/center framing when the model is unavailable. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="subject_segment" />
+
     </application>
 
 </manifest>

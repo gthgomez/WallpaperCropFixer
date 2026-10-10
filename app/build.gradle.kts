@@ -170,6 +170,10 @@ dependencies {
     // ML Kit Face Detection
     implementation(libs.mlkit.face.detection)
 
+    // ML Kit Subject Segmentation (unbundled; model delivered via Google Play
+    // services). Used to anchor framing on subjects (people/pets/objects) beyond faces.
+    implementation(libs.mlkit.subject.segmentation)
+
     // EXIF
     implementation(libs.androidx.exifinterface)
 

@@ -180,4 +180,41 @@ object CropMath {
      * Center FocusPoint convenience.
      */
     val CENTER_FOCUS = FocusPoint(0.5f, 0.5f)
+
+    /**
+     * Maps a rect from source-image pixel space to canvas pixel space through the
+     * plan's [sourceCropRect] and [outputImagePlacement]. Used to test whether a
+     * subject/face lands in a characterized canvas region (parallax margin, clock zone).
+     */
+    fun sourceRectToCanvasRect(
+        sourceRect: CropRect,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        sourceCropRect: CropRect,
+        outputImagePlacement: CropRect,
+        canvasWidth: Int,
+        canvasHeight: Int
+    ): CropRect {
+        if (sourceWidth <= 0 || sourceHeight <= 0) return sourceRect
+        val cropW = sourceCropRect.width
+        val cropH = sourceCropRect.height
+        if (cropW <= 0f || cropH <= 0f) return sourceRect
+        fun mapX(px: Float): Float {
+            val norm = ((px - sourceCropRect.left) / cropW).coerceIn(0f, 1f)
+            return outputImagePlacement.left + norm * outputImagePlacement.width
+        }
+        fun mapY(py: Float): Float {
+            val norm = ((py - sourceCropRect.top) / cropH).coerceIn(0f, 1f)
+            return outputImagePlacement.top + norm * outputImagePlacement.height
+        }
+        return CropRect(
+            left = mapX(sourceRect.left),
+            top = mapY(sourceRect.top),
+            right = mapX(sourceRect.right),
+            bottom = mapY(sourceRect.bottom)
+        )
+    }
+
+    fun faceBoundsToCropRect(bounds: com.wallpapercropfixer.domain.model.FaceBounds): CropRect =
+        CropRect(bounds.left, bounds.top, bounds.right, bounds.bottom)
 }

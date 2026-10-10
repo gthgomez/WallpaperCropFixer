@@ -9,10 +9,12 @@ import javax.inject.Inject
 class FocusPointResolver @Inject constructor() {
 
     /**
-     * Priority: manual > face cluster center > image center.
+     * Priority: manual > subject cluster center > face cluster center > image center.
      *
-     * All resolved points are clamped to a [SAFE_MARGIN] inset so that subjects at the very
-     * edge of the frame are not sheared off by JPEG block artifacts or rounding during crop.
+     * Subjects (people/pets/objects from segmentation) outrank faces because a
+     * cropped-off subject matters even when it has no detectable face. All resolved
+     * points are clamped to a [SAFE_MARGIN] inset so that subjects at the very edge
+     * of the frame are not sheared off by JPEG block artifacts or rounding.
      */
     fun resolve(
         manual: FocusPoint?,
@@ -23,9 +25,12 @@ class FocusPointResolver @Inject constructor() {
     ): FocusPoint {
         if (manual != null) return manual.withSafeMargin()
 
-        if (faceAwareEnabled && subjectAnalysis != null && subjectAnalysis.faces.isNotEmpty()) {
-            subjectAnalysis.suggestedFocusPoint?.let { return it.withSafeMargin() }
-            return clusterCenter(subjectAnalysis.faces, sourceWidth, sourceHeight).withSafeMargin()
+        if (faceAwareEnabled && subjectAnalysis != null) {
+            val anchors = subjectAnalysis.subjects.ifEmpty { subjectAnalysis.faces }
+            if (anchors.isNotEmpty()) {
+                subjectAnalysis.suggestedFocusPoint?.let { return it.withSafeMargin() }
+                return clusterCenter(anchors, sourceWidth, sourceHeight).withSafeMargin()
+            }
         }
 
         return CropMath.CENTER_FOCUS

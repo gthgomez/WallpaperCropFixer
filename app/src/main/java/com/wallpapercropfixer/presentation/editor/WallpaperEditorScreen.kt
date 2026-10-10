@@ -285,6 +285,21 @@ internal fun EditorContent(
                         )
                     }
 
+                    // Export receipt: state the exact rendered size so it is obvious
+                    // the source was never silently downscaled (the category's top complaint).
+                    val outW = state.outputWidthPx
+                    val outH = state.outputHeightPx
+                    if (outW != null && outH != null) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.editor_output_size, outW, outH),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
+
                     Spacer(Modifier.height(20.dp))
 
                     ControlsCard(state, callbacks)
@@ -379,6 +394,7 @@ private fun PreviewStage(
                 focusPoint = canvasFocusFor(displayed),
                 // Hide the focus reticle in clean preview mode
                 showFocusMarker = !isCleanPreview,
+                lockClockArea = if (isCleanPreview) null else state.lockClockArea,
                 // Taps map through the displayed snapshot, including during cancellable renders.
                 onFocusTap = if (state.displayedPreview != null && !state.isCommitting && !isCleanPreview) {
                     { tapped -> callbacks.onFocusTap(sourceFocusForTap(state, tapped)) }
@@ -415,6 +431,37 @@ private fun PreviewStage(
                 color = LocalQgColors.current.advisory
             )
         }
+    }
+
+    // Honesty guides: the preview is the product's whole promise, so it warns when
+    // the subject would be hidden by the lock clock or scrolled off by the launcher.
+    if (state.lockClockWarning) {
+        AdvisoryRow(R.string.editor_clock_warning)
+    }
+    if (state.parallaxWarning) {
+        AdvisoryRow(R.string.editor_parallax_warning)
+    }
+}
+
+@Composable
+private fun AdvisoryRow(@androidx.annotation.StringRes textRes: Int) {
+    Spacer(Modifier.height(6.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 24.dp)
+    ) {
+        Icon(
+            Icons.Default.Info,
+            contentDescription = null,
+            tint = LocalQgColors.current.advisory,
+            modifier = Modifier.size(14.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            stringResource(textRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalQgColors.current.advisory
+        )
     }
 }
 

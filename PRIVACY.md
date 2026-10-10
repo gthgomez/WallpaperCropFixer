@@ -5,7 +5,7 @@ title: Privacy Policy — Wallpaper Crop Fixer
 
 # Privacy Policy — Wallpaper Crop Fixer
 
-**Last updated:** 2026-09-19
+**Last updated:** 2026-10-10
 
 **Developer/entity:** `OWNER_PROVIDE_PLAY_DEVELOPER_ENTITY`
 
@@ -23,7 +23,7 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 - **No account required.** The app does not create user accounts. SDK installation identifiers are disclosed below.
 - **No server photo upload.** The app does not transmit your photos to developer servers.
 - **No ads or ad SDKs.** The app contains no advertising SDKs.
-- **Diagnostics:** The Google ML Kit Face Detection SDK may collect diagnostic and performance telemetry as documented below. We do not operate analytics of our own.
+- **Diagnostics:** The Google ML Kit SDKs (Face Detection and Subject Segmentation) may collect diagnostic and performance telemetry as documented below. We do not operate analytics of our own.
 
 ## Photo selection & storage
 
@@ -36,7 +36,8 @@ Wallpaper Crop Fixer processes photos **on your device**. We do not operate a ba
 - **Crop and preview math** run entirely on your device.
 - **EXIF orientation** is read locally to normalize rotation before cropping.
 - **Face-aware crop** uses **Google ML Kit Face Detection** (`com.google.mlkit:face-detection:16.1.7`) with the **bundled** on-device model shipped within the APK. Image pixels and face-detection results remain on your device and are never uploaded for ML inference.
-- **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDK may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls. Correspondingly, the app's own manifest declares only `SET_WALLPAPER`; the merged release manifest additionally carries `INTERNET` and `ACCESS_NETWORK_STATE`, contributed by the ML Kit SDK's telemetry transport (see [docs/security/permissions.md](docs/security/permissions.md)).
+- **Subject-aware crop** uses **Google ML Kit Subject Segmentation** (`com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1`), an **unbundled** on-device model. The app declares this via its ML Kit `DEPENDENCIES` metadata, and **Google Play services downloads and manages the model** (which may use the network; the app itself does not perform the download). Inference runs on-device; subject masks and results never leave the device. If the model is not yet available or fails, the app falls back to face-aware, then center, framing.
+- **SDK Diagnostic Telemetry:** As documented by Google's [ML Kit data-disclosure page](https://developers.google.com/ml-kit/android-data-disclosure), the ML Kit SDKs (Face Detection and Subject Segmentation) may transmit diagnostic metadata to Google (device information, app package name, per-installation identifiers, API configuration such as image dimensions/format, performance latency metrics, and error codes). This diagnostic data is encrypted in transit and handled pursuant to Google's Privacy Policy. The application itself makes no network calls of its own; the only network activity associated with the app is Google Play services delivering the Subject Segmentation model and any ML Kit diagnostic telemetry described here. Correspondingly, the app's own manifest declares only `SET_WALLPAPER`; the merged release manifest additionally carries `INTERNET` and `ACCESS_NETWORK_STATE`, contributed by the ML Kit SDK's telemetry transport (see [docs/security/permissions.md](docs/security/permissions.md)).
 - **Retention:** The cited ML Kit disclosure does not specify a retention period for this diagnostic metadata, and the application has no mechanism to delete telemetry held by Google. Consult Google's Privacy Policy for the provider's applicable retention practices.
 
 ## Wallpaper and export
